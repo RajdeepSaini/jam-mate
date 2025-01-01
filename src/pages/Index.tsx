@@ -4,23 +4,38 @@ import { Plus } from "lucide-react";
 import { SessionCard } from "@/components/MusicSession/SessionCard";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
 import { SearchBar } from "@/components/MusicSession/SearchBar";
+import { useMusicSession } from "@/contexts/MusicSessionContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const Index = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const {
+    sessions,
+    currentSession,
+    currentTrack,
+    isPlaying,
+    createSession,
+    joinSession,
+    setIsPlaying,
+    searchTracks,
+  } = useMusicSession();
+  const [newSessionName, setNewSessionName] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // Mock data - replace with real data later
-  const sessions = [
-    { id: 1, name: "Chill Vibes", participants: 5, currentTrack: "Blinding Lights - The Weeknd" },
-    { id: 2, name: "Rock Classics", participants: 3, currentTrack: "Sweet Child O' Mine - Guns N' Roses" },
-    { id: 3, name: "Study Session", participants: 8, currentTrack: "Lo-fi beats" },
-  ];
-
-  const handleSearch = (query: string) => {
-    console.log("Searching for:", query);
+  const handleCreateSession = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newSessionName.trim()) {
+      createSession(newSessionName.trim());
+      setNewSessionName("");
+      setIsCreateDialogOpen(false);
+      toast.success("Session created successfully!");
+    }
   };
 
   const handleJoinSession = (sessionId: number) => {
-    console.log("Joining session:", sessionId);
+    joinSession(sessionId);
+    toast.success("Joined session successfully!");
   };
 
   return (
@@ -28,14 +43,33 @@ const Index = () => {
       <div className="container mx-auto py-8 animate-fade-in">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold">Music Sessions</h1>
-          <Button className="bg-music-primary hover:bg-music-accent">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Session
-          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-music-primary hover:bg-music-accent">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Session
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Session</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateSession} className="space-y-4">
+                <Input
+                  placeholder="Session Name"
+                  value={newSessionName}
+                  onChange={(e) => setNewSessionName(e.target.value)}
+                />
+                <Button type="submit" className="w-full">
+                  Create
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="mb-8">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar onSearch={searchTracks} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -51,17 +85,15 @@ const Index = () => {
         </div>
       </div>
 
-      <MusicPlayer
-        currentTrack={{
-          title: "Blinding Lights",
-          artist: "The Weeknd",
-          albumArt: "https://via.placeholder.com/56",
-        }}
-        isPlaying={isPlaying}
-        onPlayPause={() => setIsPlaying(!isPlaying)}
-        onNext={() => console.log("Next track")}
-        onPrevious={() => console.log("Previous track")}
-      />
+      {currentSession && (
+        <MusicPlayer
+          currentTrack={currentTrack}
+          isPlaying={isPlaying}
+          onPlayPause={() => setIsPlaying(!isPlaying)}
+          onNext={() => console.log("Next track")}
+          onPrevious={() => console.log("Previous track")}
+        />
+      )}
     </div>
   );
 };
