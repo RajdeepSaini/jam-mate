@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 interface Track {
   title: string;
@@ -11,6 +11,7 @@ interface Session {
   name: string;
   participants: number;
   currentTrack?: string;
+  isPublic: boolean;
 }
 
 interface MusicSessionContextType {
@@ -18,33 +19,36 @@ interface MusicSessionContextType {
   currentSession: Session | null;
   currentTrack: Track | null;
   isPlaying: boolean;
-  createSession: (name: string) => void;
+  createSession: (name: string, isPublic: boolean) => number;
   joinSession: (sessionId: number) => void;
   leaveSession: () => void;
   setIsPlaying: (playing: boolean) => void;
   searchTracks: (query: string) => Promise<void>;
+  searchSessions: (query: string) => void;
 }
 
 const MusicSessionContext = createContext<MusicSessionContextType | undefined>(undefined);
 
 export const MusicSessionProvider = ({ children }: { children: React.ReactNode }) => {
   const [sessions, setSessions] = useState<Session[]>([
-    { id: 1, name: "Chill Vibes", participants: 5, currentTrack: "Blinding Lights - The Weeknd" },
-    { id: 2, name: "Rock Classics", participants: 3, currentTrack: "Sweet Child O' Mine - Guns N' Roses" },
-    { id: 3, name: "Study Session", participants: 8, currentTrack: "Lo-fi beats" },
+    { id: 1, name: "Chill Vibes", participants: 5, currentTrack: "Blinding Lights - The Weeknd", isPublic: true },
+    { id: 2, name: "Rock Classics", participants: 3, currentTrack: "Sweet Child O' Mine - Guns N' Roses", isPublic: true },
+    { id: 3, name: "Study Session", participants: 8, currentTrack: "Lo-fi beats", isPublic: false },
   ]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const createSession = (name: string) => {
+  const createSession = (name: string, isPublic: boolean) => {
     const newSession = {
       id: sessions.length + 1,
       name,
       participants: 1,
+      isPublic,
     };
     setSessions([...sessions, newSession]);
     setCurrentSession(newSession);
+    return newSession.id;
   };
 
   const joinSession = (sessionId: number) => {
@@ -73,7 +77,12 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
   const searchTracks = async (query: string) => {
     console.log("Searching for tracks:", query);
-    // TODO: Implement actual search functionality
+    // TODO: Implement Spotify search
+  };
+
+  const searchSessions = (query: string) => {
+    console.log("Searching for sessions:", query);
+    // TODO: Implement session search
   };
 
   return (
@@ -88,6 +97,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         leaveSession,
         setIsPlaying,
         searchTracks,
+        searchSessions,
       }}
     >
       {children}

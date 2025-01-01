@@ -4,9 +4,10 @@ import { Search } from "lucide-react";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
+  placeholder?: string;
 }
 
-export const SearchBar = ({ onSearch }: SearchBarProps) => {
+export const SearchBar = ({ onSearch, placeholder = "Search..." }: SearchBarProps) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -18,7 +19,7 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
     <form onSubmit={handleSubmit} className="flex gap-2">
       <Input
         name="search"
-        placeholder="Search for songs..."
+        placeholder={placeholder}
         className="glass-morphism"
       />
       <Button type="submit" className="bg-music-primary hover:bg-music-accent">
