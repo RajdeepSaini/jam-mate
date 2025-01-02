@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from "react";
 import { Session, Track } from "@/types/session";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { searchTracks as spotifySearchTracks } from "@/services/spotify";
 
 interface MusicSessionContextType {
   sessions: Session[];
@@ -82,8 +83,18 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
   };
 
   const searchTracks = async (query: string) => {
-    console.log("Searching for tracks:", query);
-    // TODO: Implement Spotify search
+    try {
+      const tracks = await spotifySearchTracks(query);
+      console.log("Spotify search results:", tracks);
+      // TODO: Update UI with search results
+    } catch (error) {
+      console.error("Error searching tracks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to search tracks",
+        variant: "destructive",
+      });
+    }
   };
 
   const searchSessions = (query: string) => {
