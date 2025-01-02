@@ -10,20 +10,20 @@ import Session from "./pages/Session";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <MusicSessionProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+  <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <MusicSessionProvider>
+          <Toaster />
+          <Sonner />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/session/:sessionId" element={<Session />} />
           </Routes>
-        </BrowserRouter>
-      </MusicSessionProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+        </MusicSessionProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </BrowserRouter>
 );
 
 export default App;
