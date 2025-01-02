@@ -4,7 +4,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
-import { MessageSquare, Music, BarChart2, MessageCircle } from "lucide-react";
+import { useSessionChat } from "@/hooks/useSessionChat";
+import { MessageSquare, Music, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Session = () => {
   const { sessionId } = useParams();
@@ -16,11 +20,21 @@ const Session = () => {
     searchTracks,
   } = useMusicSession();
   
+  const { messages, sendMessage } = useSessionChat(Number(sessionId));
+  const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
 
   if (!currentSession) {
     return <div>Session not found</div>;
   }
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (messageInput.trim()) {
+      sendMessage(messageInput);
+      setMessageInput("");
+    }
+  };
 
   return (
     <div className="min-h-screen pb-24">
@@ -52,19 +66,16 @@ const Session = () => {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="recommendations" className="mt-4">
-              {/* Recommendations content */}
               <div className="text-center text-gray-400">
                 Song recommendations will appear here
               </div>
             </TabsContent>
             <TabsContent value="analysis" className="mt-4">
-              {/* Analysis content */}
               <div className="text-center text-gray-400">
                 Session analysis will appear here
               </div>
             </TabsContent>
             <TabsContent value="lyrics" className="mt-4">
-              {/* Lyrics content */}
               <div className="text-center text-gray-400">
                 Song lyrics will appear here
               </div>
@@ -79,16 +90,41 @@ const Session = () => {
             <h2 className="text-xl font-semibold">Session Chat</h2>
           </div>
           <div className="h-[calc(100vh-300px)] flex flex-col">
-            <div className="flex-1 overflow-y-auto">
-              {/* Chat messages will go here */}
-            </div>
-            <div className="mt-4">
-              <input
+            <ScrollArea className="flex-1 pr-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className="mb-4"
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-primary w-8 h-8 flex items-center justify-center text-primary-foreground">
+                      {message.userId.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{message.userId}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="text-sm mt-1">{message.message}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+            <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
+              <Input
                 type="text"
                 placeholder="Type a message..."
-                className="w-full p-2 rounded-lg glass-morphism"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                className="flex-1"
               />
-            </div>
+              <Button type="submit" size="icon">
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
           </div>
         </div>
       </div>

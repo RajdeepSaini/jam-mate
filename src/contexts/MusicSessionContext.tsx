@@ -1,18 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
-
-interface Track {
-  title: string;
-  artist: string;
-  albumArt: string;
-}
-
-interface Session {
-  id: number;
-  name: string;
-  participants: number;
-  currentTrack?: string;
-  isPublic: boolean;
-}
+import { Session, Track } from "@/types/session";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 
 interface MusicSessionContextType {
   sessions: Session[];
@@ -30,6 +19,8 @@ interface MusicSessionContextType {
 const MusicSessionContext = createContext<MusicSessionContextType | undefined>(undefined);
 
 export const MusicSessionProvider = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [sessions, setSessions] = useState<Session[]>([
     { id: 1, name: "Chill Vibes", participants: 5, currentTrack: "Blinding Lights - The Weeknd", isPublic: true },
     { id: 2, name: "Rock Classics", participants: 3, currentTrack: "Sweet Child O' Mine - Guns N' Roses", isPublic: true },
@@ -41,13 +32,18 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
   const createSession = (name: string, isPublic: boolean) => {
     const newSession = {
-      id: sessions.length + 1,
+      id: Math.floor(Math.random() * 10000),
       name,
       participants: 1,
       isPublic,
     };
     setSessions([...sessions, newSession]);
     setCurrentSession(newSession);
+    navigate(`/session/${newSession.id}`);
+    toast({
+      title: "Session Created",
+      description: `Session ID: ${newSession.id}`,
+    });
     return newSession.id;
   };
 
@@ -62,6 +58,11 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         artist: "The Weeknd",
         albumArt: "https://via.placeholder.com/56",
       });
+      navigate(`/session/${sessionId}`);
+      toast({
+        title: "Session Joined",
+        description: `You've joined ${session.name}`,
+      });
     }
   };
 
@@ -72,6 +73,11 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
       setCurrentSession(null);
       setCurrentTrack(null);
       setIsPlaying(false);
+      navigate('/');
+      toast({
+        title: "Session Left",
+        description: "You've left the session",
+      });
     }
   };
 
