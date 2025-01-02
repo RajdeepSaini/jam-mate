@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MusicSessionProvider } from "./contexts/MusicSessionContext";
 import Index from "./pages/Index";
+import Session from "./pages/Session";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/session/:sessionId" element={<Session />} />
           </Routes>
         </BrowserRouter>
       </MusicSessionProvider>
