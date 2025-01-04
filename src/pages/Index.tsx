@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Globe, Lock, Users } from "lucide-react";
 import { SessionCard } from "@/components/MusicSession/SessionCard";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FriendStatus } from "@/components/MusicSession/FriendStatus";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const {
@@ -23,7 +24,35 @@ const Index = () => {
   const [isPublic, setIsPublic] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sessionIdInput, setSessionIdInput] = useState("");
+  const [username, setUsername] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/login");
+        return;
+      }
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile?.username) {
+        setUsername(profile.username);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
 
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +85,14 @@ const Index = () => {
     <div className="min-h-screen pb-24">
       <div className="container mx-auto py-8 animate-fade-in">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold">Music Sessions</h1>
-          <div className="flex gap-4">
+          <div>
+            <h1 className="text-4xl font-bold">Music Sessions</h1>
+            <p className="text-gray-600 mt-2">Welcome{username ? `, ${username}` : ""}! Ready to jam?</p>
+          </div>
+          <div className="flex gap-4 items-center">
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign Out
+            </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-music-primary hover:bg-music-accent">
