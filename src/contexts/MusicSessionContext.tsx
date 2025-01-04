@@ -13,7 +13,7 @@ interface MusicSessionContextType {
   joinSession: (sessionId: number) => void;
   leaveSession: () => void;
   setIsPlaying: (playing: boolean) => void;
-  searchTracks: (query: string) => Promise<void>;
+  searchTracks: (query: string) => Promise<Track[]>;
   searchSessions: (query: string) => void;
 }
 
@@ -55,6 +55,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
       setSessions(sessions.map((s) => (s.id === sessionId ? updatedSession : s)));
       setCurrentSession(updatedSession);
       setCurrentTrack({
+        id: "placeholder-id",
         title: "Blinding Lights",
         artist: "The Weeknd",
         albumArt: "https://via.placeholder.com/56",
@@ -82,11 +83,11 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
-  const searchTracks = async (query: string) => {
+  const searchTracks = async (query: string): Promise<Track[]> => {
     try {
       const tracks = await spotifySearchTracks(query);
       console.log("Spotify search results:", tracks);
-      // TODO: Update UI with search results
+      return tracks;
     } catch (error) {
       console.error("Error searching tracks:", error);
       toast({
@@ -94,6 +95,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         description: "Failed to search tracks",
         variant: "destructive",
       });
+      return [];
     }
   };
 
