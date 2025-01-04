@@ -82,6 +82,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           favorite_genres: string[] | null
           id: string
@@ -90,6 +91,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           favorite_genres?: string[] | null
           id: string
@@ -98,6 +100,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           favorite_genres?: string[] | null
           id?: string
@@ -157,6 +160,7 @@ export type Database = {
           current_track: Json | null
           id: string
           is_playing: boolean | null
+          is_public: boolean | null
           name: string | null
         }
         Insert: {
@@ -166,6 +170,7 @@ export type Database = {
           current_track?: Json | null
           id?: string
           is_playing?: boolean | null
+          is_public?: boolean | null
           name?: string | null
         }
         Update: {
@@ -175,6 +180,7 @@ export type Database = {
           current_track?: Json | null
           id?: string
           is_playing?: boolean | null
+          is_public?: boolean | null
           name?: string | null
         }
         Relationships: []

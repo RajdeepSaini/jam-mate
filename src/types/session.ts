@@ -1,7 +1,10 @@
 export interface Track {
+  id: string;
   title: string;
   artist: string;
   albumArt: string;
+  duration?: number;
+  uri?: string;
 }
 
 export interface Session {

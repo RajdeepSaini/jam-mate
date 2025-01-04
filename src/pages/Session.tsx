@@ -9,6 +9,9 @@ import { MessageSquare, Music, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SearchResults } from "@/components/MusicSession/SearchResults";
+import { Track } from "@/types/session";
+import { toast } from "sonner";
 
 const Session = () => {
   const { sessionId } = useParams();
@@ -23,6 +26,7 @@ const Session = () => {
   const { messages, sendMessage } = useSessionChat(Number(sessionId));
   const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
+  const [searchResults, setSearchResults] = useState<Track[]>([]);
 
   if (!currentSession) {
     return <div>Session not found</div>;
@@ -36,6 +40,22 @@ const Session = () => {
     }
   };
 
+  const handleSearch = async (query: string) => {
+    try {
+      const results = await searchTracks(query);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Error searching tracks:', error);
+      toast.error('Failed to search tracks');
+    }
+  };
+
+  const handleSelectTrack = (track: Track) => {
+    // TODO: Implement track selection
+    console.log('Selected track:', track);
+    toast.success(`Added "${track.title}" to queue`);
+  };
+
   return (
     <div className="min-h-screen pb-24">
       <div className="container mx-auto py-8 grid grid-cols-12 gap-6">
@@ -45,10 +65,8 @@ const Session = () => {
             <Music className="h-5 w-5" />
             <h2 className="text-xl font-semibold">Search Songs</h2>
           </div>
-          <SearchBar onSearch={searchTracks} placeholder="Search for songs..." />
-          <div className="mt-4 space-y-4">
-            {/* Song search results will go here */}
-          </div>
+          <SearchBar onSearch={handleSearch} placeholder="Search for songs..." />
+          <SearchResults tracks={searchResults} onSelectTrack={handleSelectTrack} />
         </div>
 
         {/* Middle Column - Tabs */}

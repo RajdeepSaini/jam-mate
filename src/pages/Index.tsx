@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Globe, Lock, Users } from "lucide-react";
-import { SessionCard } from "@/components/MusicSession/SessionCard";
 import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,6 +10,8 @@ import { toast } from "sonner";
 import { FriendStatus } from "@/components/MusicSession/FriendStatus";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { UserMenu } from "@/components/Layout/UserMenu";
+import { SessionList } from "@/components/MusicSession/SessionList";
 
 const Index = () => {
   const {
@@ -25,6 +26,7 @@ const Index = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sessionIdInput, setSessionIdInput] = useState("");
   const [username, setUsername] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,22 +39,18 @@ const Index = () => {
       // Get user profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('username')
+        .select('username, avatar_url')
         .eq('id', session.user.id)
         .single();
       
-      if (profile?.username) {
-        setUsername(profile.username);
+      if (profile) {
+        setUsername(profile.username || '');
+        setAvatarUrl(profile.avatar_url || '');
       }
     };
 
     checkAuth();
   }, [navigate]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
 
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,9 +88,7 @@ const Index = () => {
             <p className="text-gray-600 mt-2">Welcome{username ? `, ${username}` : ""}! Ready to jam?</p>
           </div>
           <div className="flex gap-4 items-center">
-            <Button variant="outline" onClick={handleSignOut}>
-              Sign Out
-            </Button>
+            <UserMenu username={username} avatarUrl={avatarUrl} />
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-music-primary hover:bg-music-accent">
@@ -199,18 +195,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sessions.map((session) => (
-            <SessionCard
-              key={session.id}
-              name={session.name}
-              participants={session.participants}
-              currentTrack={session.currentTrack}
-              onJoin={() => handleJoinSession(session.id)}
-              isPublic={session.isPublic}
-            />
-          ))}
-        </div>
+        <SessionList sessions={sessions} onJoinSession={handleJoinSession} />
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Globe, Lock } from "lucide-react";
+import { Users, Globe, Lock, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 interface SessionCardProps {
   name: string;
@@ -9,9 +10,15 @@ interface SessionCardProps {
   currentTrack?: string;
   onJoin: () => void;
   isPublic: boolean;
+  sessionId: number;
 }
 
-export const SessionCard = ({ name, participants, currentTrack, onJoin, isPublic }: SessionCardProps) => {
+export const SessionCard = ({ name, participants, currentTrack, onJoin, isPublic, sessionId }: SessionCardProps) => {
+  const copySessionId = () => {
+    navigator.clipboard.writeText(sessionId.toString());
+    toast.success("Session ID copied to clipboard");
+  };
+
   return (
     <Card className="glass-morphism hover-scale">
       <CardHeader>
@@ -32,6 +39,12 @@ export const SessionCard = ({ name, participants, currentTrack, onJoin, isPublic
         <CardDescription className="text-sm text-gray-400">
           {currentTrack || "No track playing"}
         </CardDescription>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-sm text-gray-500">ID: {sessionId}</span>
+          <Button variant="ghost" size="icon" onClick={copySessionId}>
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Button 
