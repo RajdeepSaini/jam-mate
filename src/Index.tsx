@@ -6,7 +6,7 @@ import { toast } from "sonner";
 const Index = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  const handleJoinSession = (sessionId: string) => {
+  const handleJoinSession = (sessionId: number) => {
     // This is a placeholder function that will be implemented later
     toast.success(`Joining session ${sessionId}`);
   };
