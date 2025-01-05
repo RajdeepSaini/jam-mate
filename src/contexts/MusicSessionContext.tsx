@@ -30,11 +30,38 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
   const [sessions, setSessions] = useState<Session[]>([]);
   const { setActiveSession } = useSessionStore();
 
-  const formatSession = (session: any): Session => ({
-    ...session,
-    current_track: session.current_track ? JSON.parse(session.current_track) : null,
-    participants: session.session_participants?.[0]?.count || 0,
-  });
+  const formatSession = (session: any): Session => {
+    let parsedTrack: Track | null = null;
+    if (session.current_track) {
+      try {
+        const trackData = typeof session.current_track === 'string' 
+          ? JSON.parse(session.current_track) 
+          : session.current_track;
+        parsedTrack = {
+          id: trackData.id,
+          title: trackData.title,
+          artist: trackData.artist,
+          albumArt: trackData.albumArt,
+          duration: trackData.duration,
+          uri: trackData.uri
+        };
+      } catch (e) {
+        console.error('Error parsing track data:', e);
+      }
+    }
+
+    return {
+      id: session.id,
+      code: session.code,
+      name: session.name,
+      created_by: session.created_by,
+      created_at: session.created_at,
+      current_track: parsedTrack,
+      is_playing: session.is_playing,
+      is_public: session.is_public,
+      participants: session.session_participants?.[0]?.count || 0
+    };
+  };
 
   const fetchSessions = async () => {
     try {
@@ -141,7 +168,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (joinError) throw joinError;
 
-      setCurrentSession(session);
+      setCurrentSession(formatSession(session));
       setActiveSession(session.id);
       toast.success(`Joined session: ${session.name}`);
     } catch (error) {
