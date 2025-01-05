@@ -3,18 +3,18 @@ import { Session, Track } from "@/types/session";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { searchTracks as spotifySearchTracks } from "@/services/spotify";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface MusicSessionContextType {
-  sessions: Session[];
   currentSession: Session | null;
   currentTrack: Track | null;
   isPlaying: boolean;
-  createSession: (name: string, isPublic: boolean) => number;
-  joinSession: (sessionId: number) => void;
+  createSession: (name: string, isPublic: boolean) => Promise<string>;
+  joinSession: (sessionId: string) => Promise<void>;
   leaveSession: () => void;
   setIsPlaying: (playing: boolean) => void;
   searchTracks: (query: string) => Promise<Track[]>;
-  searchSessions: (query: string) => void;
 }
 
 const MusicSessionContext = createContext<MusicSessionContextType | undefined>(undefined);
@@ -22,71 +22,129 @@ const MusicSessionContext = createContext<MusicSessionContextType | undefined>(u
 export const MusicSessionProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [sessions, setSessions] = useState<Session[]>([
-    { id: 1, name: "Chill Vibes", participants: 5, currentTrack: "Blinding Lights - The Weeknd", isPublic: true },
-    { id: 2, name: "Rock Classics", participants: 3, currentTrack: "Sweet Child O' Mine - Guns N' Roses", isPublic: true },
-    { id: 3, name: "Study Session", participants: 8, currentTrack: "Lo-fi beats", isPublic: false },
-  ]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const createSession = (name: string, isPublic: boolean) => {
-    const newSession = {
-      id: Math.floor(Math.random() * 10000),
-      name,
-      participants: 1,
-      isPublic,
-    };
-    setSessions([...sessions, newSession]);
-    setCurrentSession(newSession);
-    navigate(`/session/${newSession.id}`);
-    toast({
-      title: "Session Created",
-      description: `Session ID: ${newSession.id}`,
-    });
-    return newSession.id;
+  const createSession = async (name: string, isPublic: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const { data: session, error } = await supabase
+        .from('sessions')
+        .insert({
+          name,
+          is_public: isPublic,
+          created_by: user.id,
+          code,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Join the session as the creator
+      await supabase
+        .from('session_participants')
+        .insert({
+          session_id: session.id,
+          user_id: user.id,
+        });
+
+      setCurrentSession(session);
+      navigate(`/session/${session.id}`);
+      toast({
+        title: "Session Created",
+        description: `Session code: ${code}`,
+      });
+      return session.id;
+    } catch (error) {
+      console.error("Error creating session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create session",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
-  const joinSession = (sessionId: number) => {
-    const session = sessions.find((s) => s.id === sessionId);
-    if (session) {
-      const updatedSession = { ...session, participants: session.participants + 1 };
-      setSessions(sessions.map((s) => (s.id === sessionId ? updatedSession : s)));
-      setCurrentSession(updatedSession);
-      setCurrentTrack({
-        id: "placeholder-id",
-        title: "Blinding Lights",
-        artist: "The Weeknd",
-        albumArt: "https://via.placeholder.com/56",
-      });
+  const joinSession = async (sessionId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Check if session exists
+      const { data: session, error: sessionError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) throw new Error("Session not found");
+
+      // Join the session
+      const { error: joinError } = await supabase
+        .from('session_participants')
+        .insert({
+          session_id: sessionId,
+          user_id: user.id,
+        });
+
+      if (joinError) throw joinError;
+
+      setCurrentSession(session);
       navigate(`/session/${sessionId}`);
       toast({
         title: "Session Joined",
         description: `You've joined ${session.name}`,
       });
+    } catch (error) {
+      console.error("Error joining session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to join session",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
-  const leaveSession = () => {
+  const leaveSession = async () => {
     if (currentSession) {
-      const updatedSession = { ...currentSession, participants: currentSession.participants - 1 };
-      setSessions(sessions.map((s) => (s.id === currentSession.id ? updatedSession : s)));
-      setCurrentSession(null);
-      setCurrentTrack(null);
-      setIsPlaying(false);
-      navigate('/');
-      toast({
-        title: "Session Left",
-        description: "You've left the session",
-      });
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("User not authenticated");
+
+        await supabase
+          .from('session_participants')
+          .delete()
+          .match({ session_id: currentSession.id, user_id: user.id });
+
+        setCurrentSession(null);
+        setCurrentTrack(null);
+        setIsPlaying(false);
+        navigate('/');
+        toast({
+          title: "Session Left",
+          description: "You've left the session",
+        });
+      } catch (error) {
+        console.error("Error leaving session:", error);
+        toast({
+          title: "Error",
+          description: "Failed to leave session",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const searchTracks = async (query: string): Promise<Track[]> => {
     try {
       const tracks = await spotifySearchTracks(query);
-      console.log("Spotify search results:", tracks);
       return tracks;
     } catch (error) {
       console.error("Error searching tracks:", error);
@@ -99,15 +157,9 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
-  const searchSessions = (query: string) => {
-    console.log("Searching for sessions:", query);
-    // TODO: Implement session search
-  };
-
   return (
     <MusicSessionContext.Provider
       value={{
-        sessions,
         currentSession,
         currentTrack,
         isPlaying,
@@ -116,7 +168,6 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         leaveSession,
         setIsPlaying,
         searchTracks,
-        searchSessions,
       }}
     >
       {children}

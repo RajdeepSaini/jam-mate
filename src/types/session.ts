@@ -8,16 +8,18 @@ export interface Track {
 }
 
 export interface Session {
-  id: number;
+  id: string;
   name: string;
-  participants: number;
-  currentTrack?: string;
-  isPublic: boolean;
+  code: string;
+  created_by: string;
+  is_public: boolean;
+  current_track?: Track;
+  is_playing?: boolean;
 }
 
 export interface ChatMessage {
   id: string;
-  sessionId: number;
+  sessionId: string;
   userId: string;
   message: string;
   timestamp: Date;

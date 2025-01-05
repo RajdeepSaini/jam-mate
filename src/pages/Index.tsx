@@ -1,26 +1,17 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Globe, Lock, Users } from "lucide-react";
-import { SearchBar } from "@/components/MusicSession/SearchBar";
+import { Plus, Globe, Lock } from "lucide-react";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FriendStatus } from "@/components/MusicSession/FriendStatus";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/Layout/UserMenu";
-import { SessionList } from "@/components/MusicSession/SessionList";
 
 const Index = () => {
-  const {
-    sessions,
-    createSession,
-    joinSession,
-    searchSessions,
-  } = useMusicSession();
-  
+  const { createSession, joinSession } = useMusicSession();
   const [newSessionName, setNewSessionName] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -36,7 +27,7 @@ const Index = () => {
         navigate("/login");
         return;
       }
-      // Get user profile
+      
       const { data: profile } = await supabase
         .from('profiles')
         .select('username, avatar_url')
@@ -52,30 +43,30 @@ const Index = () => {
     checkAuth();
   }, [navigate]);
 
-  const handleCreateSession = (e: React.FormEvent) => {
+  const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newSessionName.trim()) {
-      const sessionId = createSession(newSessionName.trim(), isPublic);
-      setNewSessionName("");
-      setIsCreateDialogOpen(false);
-      toast.success("Session created successfully!");
-      navigate(`/session/${sessionId}`);
+      try {
+        await createSession(newSessionName.trim(), isPublic);
+        setNewSessionName("");
+        setIsCreateDialogOpen(false);
+        toast.success("Session created successfully!");
+      } catch (error) {
+        toast.error("Failed to create session");
+      }
     }
   };
 
-  const handleJoinSession = (sessionId: number) => {
-    joinSession(sessionId);
-    toast.success("Joined session successfully!");
-    navigate(`/session/${sessionId}`);
-  };
-
-  const handleJoinPrivateSession = (e: React.FormEvent) => {
+  const handleJoinSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    const sessionId = parseInt(sessionIdInput);
-    if (!isNaN(sessionId)) {
-      handleJoinSession(sessionId);
-    } else {
-      toast.error("Invalid session ID");
+    if (sessionIdInput.trim()) {
+      try {
+        await joinSession(sessionIdInput.trim());
+        setSessionIdInput("");
+        toast.success("Joined session successfully!");
+      } catch (error) {
+        toast.error("Failed to join session. Please check the session ID.");
+      }
     }
   };
 
@@ -136,66 +127,28 @@ const Index = () => {
                 </form>
               </DialogContent>
             </Dialog>
-
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Lock className="h-4 w-4 mr-2" />
-                  Join Private Session
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Join Private Session</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleJoinPrivateSession} className="space-y-4">
-                  <div>
-                    <Label htmlFor="sessionId">Session ID</Label>
-                    <Input
-                      id="sessionId"
-                      placeholder="Enter session ID"
-                      value={sessionIdInput}
-                      onChange={(e) => setSessionIdInput(e.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Join
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 
-        <div className="mb-8">
-          <SearchBar onSearch={searchSessions} placeholder="Search for sessions..." />
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Friends</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <FriendStatus
-              name="John Doe"
-              status="online"
-              activity="Listening to Spotify"
-            />
-            <FriendStatus
-              name="Jane Smith"
-              status="online"
-              activity="In Session: Chill Vibes"
-            />
-            <FriendStatus
-              name="Mike Johnson"
-              status="offline"
-              lastSeen="2 hours ago"
-            />
+        <div className="max-w-md mx-auto mt-12">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Join a Session</h2>
+            <form onSubmit={handleJoinSession} className="space-y-4">
+              <div>
+                <Label htmlFor="sessionId">Session ID</Label>
+                <Input
+                  id="sessionId"
+                  placeholder="Enter session ID"
+                  value={sessionIdInput}
+                  onChange={(e) => setSessionIdInput(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Join Session
+              </Button>
+            </form>
           </div>
         </div>
-
-        <SessionList sessions={sessions} onJoinSession={handleJoinSession} />
       </div>
     </div>
   );
