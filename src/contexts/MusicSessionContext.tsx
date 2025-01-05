@@ -37,14 +37,17 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         const trackData = typeof session.current_track === 'string' 
           ? JSON.parse(session.current_track) 
           : session.current_track;
-        parsedTrack = {
-          id: trackData.id,
-          title: trackData.title,
-          artist: trackData.artist,
-          albumArt: trackData.albumArt,
-          duration: trackData.duration,
-          uri: trackData.uri
-        };
+        
+        if (trackData) {
+          parsedTrack = {
+            id: trackData.id || '',
+            title: trackData.title || '',
+            artist: trackData.artist || '',
+            albumArt: trackData.albumArt || '',
+            duration: trackData.duration,
+            uri: trackData.uri
+          };
+        }
       } catch (e) {
         console.error('Error parsing track data:', e);
       }
@@ -57,8 +60,8 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
       created_by: session.created_by,
       created_at: session.created_at,
       current_track: parsedTrack,
-      is_playing: session.is_playing,
-      is_public: session.is_public,
+      is_playing: session.is_playing || false,
+      is_public: session.is_public || false,
       participants: session.session_participants?.[0]?.count || 0
     };
   };
