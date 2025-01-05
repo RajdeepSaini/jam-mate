@@ -9,19 +9,32 @@ export const useSessionData = () => {
 
   const fetchSessions = async () => {
     try {
-      const { data: sessionsData, error } = await supabase
+      // First, fetch all public sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
         .from('sessions')
-        .select(`
-          *,
-          session_participants (
-            count
-          )
-        `)
+        .select('*')
         .eq('is_public', true);
 
-      if (error) throw error;
+      if (sessionsError) throw sessionsError;
 
-      const formattedSessions = sessionsData.map(formatSession);
+      // Then, for each session, fetch its participant count
+      const sessionsWithCounts = await Promise.all(
+        sessionsData.map(async (session) => {
+          const { count, error: countError } = await supabase
+            .from('session_participants')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', session.id);
+
+          if (countError) {
+            console.error('Error fetching participant count:', countError);
+            return { ...session, participants: 0 };
+          }
+
+          return { ...session, participants: count || 0 };
+        })
+      );
+
+      const formattedSessions = sessionsWithCounts.map(formatSession);
       setSessions(formattedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -31,20 +44,33 @@ export const useSessionData = () => {
 
   const searchSessions = async (query: string) => {
     try {
-      const { data, error } = await supabase
+      // First, fetch filtered sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
         .from('sessions')
-        .select(`
-          *,
-          session_participants (
-            count
-          )
-        `)
+        .select('*')
         .eq('is_public', true)
         .ilike('name', `%${query}%`);
 
-      if (error) throw error;
+      if (sessionsError) throw sessionsError;
 
-      const formattedSessions = data.map(formatSession);
+      // Then, fetch participant counts
+      const sessionsWithCounts = await Promise.all(
+        sessionsData.map(async (session) => {
+          const { count, error: countError } = await supabase
+            .from('session_participants')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', session.id);
+
+          if (countError) {
+            console.error('Error fetching participant count:', countError);
+            return { ...session, participants: 0 };
+          }
+
+          return { ...session, participants: count || 0 };
+        })
+      );
+
+      const formattedSessions = sessionsWithCounts.map(formatSession);
       setSessions(formattedSessions);
     } catch (error) {
       console.error('Error searching sessions:', error);
