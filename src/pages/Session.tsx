@@ -24,7 +24,7 @@ const Session = () => {
     searchTracks,
   } = useMusicSession();
   
-  const { messages, sendMessage } = useSessionChat(Number(sessionId));
+  const { messages, sendMessage } = useSessionChat(sessionId || '');
   const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
