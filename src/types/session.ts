@@ -13,8 +13,9 @@ export interface Session {
   code: string;
   created_by: string;
   is_public: boolean;
-  current_track?: Track;
+  current_track?: Track | null;
   is_playing?: boolean;
+  participants?: string[];
 }
 
 export interface ChatMessage {

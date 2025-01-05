@@ -53,7 +53,18 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
           user_id: user.id,
         });
 
-      setCurrentSession(session);
+      const sessionData: Session = {
+        id: session.id,
+        name: session.name,
+        code: session.code,
+        created_by: session.created_by,
+        is_public: session.is_public,
+        current_track: session.current_track ? JSON.parse(session.current_track) : null,
+        is_playing: session.is_playing,
+        participants: [],
+      };
+
+      setCurrentSession(sessionData);
       navigate(`/session/${session.id}`);
       toast({
         title: "Session Created",

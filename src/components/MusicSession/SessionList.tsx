@@ -3,7 +3,7 @@ import { Session } from "@/types/session";
 
 interface SessionListProps {
   sessions: Session[];
-  onJoinSession: (sessionId: number) => void;
+  onJoinSession: (sessionId: string) => void;
 }
 
 export const SessionList = ({ sessions, onJoinSession }: SessionListProps) => {
@@ -13,10 +13,10 @@ export const SessionList = ({ sessions, onJoinSession }: SessionListProps) => {
         <SessionCard
           key={session.id}
           name={session.name}
-          participants={session.participants}
-          currentTrack={session.currentTrack}
+          participants={session.participants || []}
+          currentTrack={session.current_track}
           onJoin={() => onJoinSession(session.id)}
-          isPublic={session.isPublic}
+          isPublic={session.is_public}
           sessionId={session.id}
         />
       ))}
