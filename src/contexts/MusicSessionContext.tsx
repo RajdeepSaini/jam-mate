@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { searchTracks as spotifySearchTracks } from "@/services/spotify";
 import { supabase } from "@/integrations/supabase/client";
+import { parseTrackData } from "@/utils/typeGuards";
 
 interface MusicSessionContextType {
   currentSession: Session | null;
@@ -57,11 +58,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         code: session.code,
         created_by: session.created_by,
         is_public: session.is_public,
-        current_track: session.current_track ? 
-          (typeof session.current_track === 'string' ? 
-            JSON.parse(session.current_track) as Track : 
-            session.current_track as Track) : 
-          null,
+        current_track: parseTrackData(session.current_track),
         is_playing: session.is_playing,
         participants: [],
       };
@@ -112,11 +109,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         code: session.code,
         created_by: session.created_by,
         is_public: session.is_public,
-        current_track: session.current_track ? 
-          (typeof session.current_track === 'string' ? 
-            JSON.parse(session.current_track) as Track : 
-            session.current_track as Track) : 
-          null,
+        current_track: parseTrackData(session.current_track),
         is_playing: session.is_playing,
         participants: [],
       };
