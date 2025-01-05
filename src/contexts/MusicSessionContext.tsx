@@ -6,6 +6,8 @@ import { searchTracks as spotifySearchTracks } from "@/services/spotify";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionStore } from "@/stores/sessionStore";
 import { nanoid } from 'nanoid';
+import { formatSession } from "@/utils/sessionFormatters";
+import { useSessionData } from "@/hooks/useSessionData";
 
 interface MusicSessionContextType {
   currentSession: Session | null;
@@ -27,94 +29,8 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [sessions, setSessions] = useState<Session[]>([]);
   const { setActiveSession } = useSessionStore();
-
-  const formatSession = (session: any): Session => {
-    let parsedTrack: Track | null = null;
-    
-    if (session.current_track) {
-      try {
-        const trackData = typeof session.current_track === 'string' 
-          ? JSON.parse(session.current_track) 
-          : session.current_track;
-        
-        if (trackData) {
-          parsedTrack = {
-            id: trackData.id || '',
-            title: trackData.title || '',
-            artist: trackData.artist || '',
-            albumArt: trackData.albumArt || '',
-            duration: trackData.duration || 0,
-            uri: trackData.uri || ''
-          };
-        }
-      } catch (e) {
-        console.error('Error parsing track data:', e);
-      }
-    }
-
-    return {
-      id: session.id,
-      code: session.code,
-      name: session.name || null,
-      created_by: session.created_by,
-      created_at: session.created_at,
-      current_track: parsedTrack,
-      is_playing: session.is_playing || false,
-      is_public: session.is_public || false,
-      participants: session.session_participants?.[0]?.count || 0
-    };
-  };
-
-  const fetchSessions = async () => {
-    try {
-      const { data: sessionsData, error } = await supabase
-        .from('sessions')
-        .select(`
-          *,
-          session_participants (
-            count
-          )
-        `)
-        .eq('is_public', true);
-
-      if (error) throw error;
-
-      const formattedSessions = sessionsData.map(formatSession);
-      setSessions(formattedSessions);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      toast.error("Failed to fetch sessions");
-    }
-  };
-
-  const searchSessions = async (query: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select(`
-          *,
-          session_participants (
-            count
-          )
-        `)
-        .eq('is_public', true)
-        .ilike('name', `%${query}%`);
-
-      if (error) throw error;
-
-      const formattedSessions = data.map(session => ({
-        ...session,
-        participants: session.session_participants?.[0]?.count || 0
-      }));
-
-      setSessions(formattedSessions);
-    } catch (error) {
-      console.error('Error searching sessions:', error);
-      toast.error("Failed to search sessions");
-    }
-  };
+  const { sessions, searchSessions } = useSessionData();
 
   const createSession = async (name: string, isPublic: boolean) => {
     try {
@@ -132,7 +48,6 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
-      // Join the session as the creator
       await supabase
         .from('session_participants')
         .insert({
@@ -140,7 +55,8 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
           user_id: (await supabase.auth.getUser()).data.user?.id
         });
 
-      setCurrentSession(session);
+      const formattedSession = formatSession(session);
+      setCurrentSession(formattedSession);
       setActiveSession(session.id);
       toast.success("Session created successfully!");
       return session.id;
@@ -172,7 +88,8 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (joinError) throw joinError;
 
-      setCurrentSession(formatSession(session));
+      const formattedSession = formatSession(session);
+      setCurrentSession(formattedSession);
       setActiveSession(session.id);
       toast.success(`Joined session: ${session.name}`);
     } catch (error) {
@@ -221,7 +138,6 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
-  // Subscribe to real-time session updates
   useEffect(() => {
     if (!currentSession) return;
 
@@ -236,9 +152,9 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
           filter: `id=eq.${currentSession.id}`
         },
         (payload) => {
-          console.log('Session updated:', payload);
           if (payload.new) {
-            setCurrentSession(formatSession(payload.new));
+            const formattedSession = formatSession(payload.new);
+            setCurrentSession(formattedSession);
           }
         }
       )

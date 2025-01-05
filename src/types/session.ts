@@ -3,8 +3,8 @@ export interface Track {
   title: string;
   artist: string;
   albumArt: string;
-  duration?: number;
-  uri?: string;
+  duration: number;
+  uri: string;
 }
 
 export interface Session {
