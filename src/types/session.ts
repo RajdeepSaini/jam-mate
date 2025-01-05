@@ -14,8 +14,8 @@ export interface Session {
   created_by: string;
   created_at: string | null;
   current_track: Track | null;
-  is_playing: boolean | null;
-  is_public: boolean | null;
+  is_playing: boolean;
+  is_public: boolean;
   participants?: number;
 }
 

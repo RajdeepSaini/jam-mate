@@ -32,6 +32,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
   const formatSession = (session: any): Session => {
     let parsedTrack: Track | null = null;
+    
     if (session.current_track) {
       try {
         const trackData = typeof session.current_track === 'string' 
@@ -44,8 +45,8 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
             title: trackData.title || '',
             artist: trackData.artist || '',
             albumArt: trackData.albumArt || '',
-            duration: trackData.duration,
-            uri: trackData.uri
+            duration: trackData.duration || 0,
+            uri: trackData.uri || ''
           };
         }
       } catch (e) {
@@ -56,7 +57,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
     return {
       id: session.id,
       code: session.code,
-      name: session.name,
+      name: session.name || null,
       created_by: session.created_by,
       created_at: session.created_at,
       current_track: parsedTrack,
