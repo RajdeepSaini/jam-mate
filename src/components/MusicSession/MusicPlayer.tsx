@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, SkipForward, SkipBack, Volume2, ListMusic } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Track } from "@/types/session";
+import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
 
 interface MusicPlayerProps {
   currentTrack?: {
@@ -16,7 +13,6 @@ interface MusicPlayerProps {
   onPlayPause: () => void;
   onNext: () => void;
   onPrevious: () => void;
-  queue?: Track[];
 }
 
 export const MusicPlayer = ({
@@ -25,7 +21,6 @@ export const MusicPlayer = ({
   onPlayPause,
   onNext,
   onPrevious,
-  queue = [],
 }: MusicPlayerProps) => {
   const [volume, setVolume] = useState([100]);
 
@@ -87,43 +82,15 @@ export const MusicPlayer = ({
           />
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-5 w-5 text-gray-400" />
-            <Slider
-              value={volume}
-              onValueChange={setVolume}
-              max={100}
-              step={1}
-              className="w-[100px]"
-            />
-          </div>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
-                <ListMusic className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>Queue</SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-100px)] mt-4">
-                <div className="space-y-4">
-                  {queue.map((track, index) => (
-                    <div key={track.id} className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg">
-                      <img src={track.albumArt} alt={track.title} className="h-12 w-12 rounded" />
-                      <div>
-                        <h4 className="font-medium">{track.title}</h4>
-                        <p className="text-sm text-gray-500">{track.artist}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-5 w-5 text-gray-400" />
+          <Slider
+            value={volume}
+            onValueChange={setVolume}
+            max={100}
+            step={1}
+            className="w-[100px]"
+          />
         </div>
       </div>
     </div>

@@ -5,12 +5,13 @@ import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
 import { useSessionChat } from "@/hooks/useSessionChat";
-import { MessageSquare, Music } from "lucide-react";
+import { MessageSquare, Music, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchResults } from "@/components/MusicSession/SearchResults";
 import { Track } from "@/types/session";
 import { toast } from "sonner";
-import { SessionHeader } from "@/components/MusicSession/SessionHeader";
-import { ChatPanel } from "@/components/MusicSession/ChatPanel";
 
 const Session = () => {
   const { sessionId } = useParams();
@@ -26,11 +27,17 @@ const Session = () => {
   const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
-  const [queue, setQueue] = useState<Track[]>([]);
 
-  const handleAddToQueue = (track: Track) => {
-    setQueue(prev => [...prev, track]);
-    toast.success(`Added "${track.title}" to queue`);
+  if (!currentSession) {
+    return <div>Session not found</div>;
+  }
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (messageInput.trim()) {
+      sendMessage(messageInput);
+      setMessageInput("");
+    }
   };
 
   const handleSearch = async (query: string) => {
@@ -44,18 +51,14 @@ const Session = () => {
   };
 
   const handleSelectTrack = (track: Track) => {
-    handleAddToQueue(track);
+    // TODO: Implement track selection
+    console.log('Selected track:', track);
+    toast.success(`Added "${track.title}" to queue`);
   };
-
-  if (!currentSession || !sessionId) {
-    return <div>Session not found</div>;
-  }
 
   return (
     <div className="min-h-screen pb-24">
       <div className="container mx-auto py-8 grid grid-cols-12 gap-6">
-        <SessionHeader sessionId={sessionId} />
-        
         {/* Left Column - Song Search */}
         <div className="col-span-3 glass-morphism p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-4">
@@ -80,18 +83,17 @@ const Session = () => {
                 Lyrics
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="recommendations">
-              <SearchResults 
-                tracks={searchResults} 
-                onSelectTrack={handleSelectTrack} 
-              />
+            <TabsContent value="recommendations" className="mt-4">
+              <div className="text-center text-gray-400">
+                Song recommendations will appear here
+              </div>
             </TabsContent>
-            <TabsContent value="analysis">
+            <TabsContent value="analysis" className="mt-4">
               <div className="text-center text-gray-400">
                 Session analysis will appear here
               </div>
             </TabsContent>
-            <TabsContent value="lyrics">
+            <TabsContent value="lyrics" className="mt-4">
               <div className="text-center text-gray-400">
                 Song lyrics will appear here
               </div>
@@ -105,12 +107,43 @@ const Session = () => {
             <MessageSquare className="h-5 w-5" />
             <h2 className="text-xl font-semibold">Session Chat</h2>
           </div>
-          <ChatPanel
-            messages={messages}
-            onSendMessage={sendMessage}
-            messageInput={messageInput}
-            setMessageInput={setMessageInput}
-          />
+          <div className="h-[calc(100vh-300px)] flex flex-col">
+            <ScrollArea className="flex-1 pr-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className="mb-4"
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="rounded-full bg-primary w-8 h-8 flex items-center justify-center text-primary-foreground">
+                      {message.userId.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{message.userId}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="text-sm mt-1">{message.message}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+            <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
+              <Input
+                type="text"
+                placeholder="Type a message..."
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" size="icon">
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -120,7 +153,6 @@ const Session = () => {
         onPlayPause={() => setIsPlaying(!isPlaying)}
         onNext={() => console.log("Next track")}
         onPrevious={() => console.log("Previous track")}
-        queue={queue}
       />
     </div>
   );
