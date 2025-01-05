@@ -12,6 +12,7 @@ export const useSessionChat = (sessionId: string) => {
       message,
       timestamp: new Date(),
     };
+
     setMessages((prev) => [...prev, newMessage]);
   };
 

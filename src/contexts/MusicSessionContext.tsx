@@ -59,7 +59,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         code: session.code,
         created_by: session.created_by,
         is_public: session.is_public,
-        current_track: session.current_track ? JSON.parse(session.current_track) : null,
+        current_track: session.current_track ? JSON.parse(session.current_track as string) as Track : null,
         is_playing: session.is_playing,
         participants: [],
       };

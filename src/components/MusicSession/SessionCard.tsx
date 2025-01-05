@@ -3,19 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Globe, Lock, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Track } from "@/types/session";
 
 interface SessionCardProps {
   name: string;
-  participants: number;
-  currentTrack?: string;
+  participants: string[];
+  currentTrack?: Track | null;
   onJoin: () => void;
   isPublic: boolean;
-  sessionId: number;
+  sessionId: string;
 }
 
 export const SessionCard = ({ name, participants, currentTrack, onJoin, isPublic, sessionId }: SessionCardProps) => {
   const copySessionId = () => {
-    navigator.clipboard.writeText(sessionId.toString());
+    navigator.clipboard.writeText(sessionId);
     toast.success("Session ID copied to clipboard");
   };
 
@@ -33,11 +34,11 @@ export const SessionCard = ({ name, participants, currentTrack, onJoin, isPublic
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            {participants}
+            {participants.length}
           </Badge>
         </div>
         <CardDescription className="text-sm text-gray-400">
-          {currentTrack || "No track playing"}
+          {currentTrack?.title || "No track playing"}
         </CardDescription>
         <div className="flex items-center gap-2 mt-2">
           <span className="text-sm text-gray-500">ID: {sessionId}</span>
