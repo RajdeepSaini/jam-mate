@@ -1,35 +1,31 @@
-import { createBrowserRouter } from "react-router-dom";
-import Root from "./Root";
-import ErrorPage from "./ErrorPage";
-import Index from "./Index";
-import Login from "./pages/Login";
-import ProfileSetup from "./pages/ProfileSetup";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { MusicSessionProvider } from "./contexts/MusicSessionContext";
+import Index from "./pages/Index";
 import Session from "./pages/Session";
+import Login from "./pages/Login";
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Root />,
-    errorElement: <ErrorPage />,
-    children: [
-      {
-        path: "/",
-        element: <Index />,
-      },
-      {
-        path: "/login",
-        element: <Login />,
-      },
-      {
-        path: "/profile/setup",
-        element: <ProfileSetup />,
-      },
-      {
-        path: "/session/:id",
-        element: <Session />,
-      },
-    ],
-  },
-]);
+const queryClient = new QueryClient();
 
-export default router;
+const App = () => (
+  <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <MusicSessionProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/session/:sessionId" element={<Session />} />
+          </Routes>
+        </MusicSessionProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </BrowserRouter>
+);
+
+export default App;
