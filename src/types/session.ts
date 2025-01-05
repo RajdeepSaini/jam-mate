@@ -3,25 +3,21 @@ export interface Track {
   title: string;
   artist: string;
   albumArt: string;
-  duration: number;
-  uri: string;
+  duration?: number;
+  uri?: string;
 }
 
 export interface Session {
-  id: string;
-  code: string;
-  name: string | null;
-  created_by: string;
-  created_at: string | null;
-  current_track: Track | null;
-  is_playing: boolean;
-  is_public: boolean;
-  participants?: number;
+  id: number;
+  name: string;
+  participants: number;
+  currentTrack?: string;
+  isPublic: boolean;
 }
 
 export interface ChatMessage {
   id: string;
-  sessionId: string;
+  sessionId: number;
   userId: string;
   message: string;
   timestamp: Date;

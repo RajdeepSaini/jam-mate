@@ -10,12 +10,12 @@ interface SessionCardProps {
   currentTrack?: string;
   onJoin: () => void;
   isPublic: boolean;
-  sessionId: string;
+  sessionId: number;
 }
 
 export const SessionCard = ({ name, participants, currentTrack, onJoin, isPublic, sessionId }: SessionCardProps) => {
   const copySessionId = () => {
-    navigator.clipboard.writeText(sessionId);
+    navigator.clipboard.writeText(sessionId.toString());
     toast.success("Session ID copied to clipboard");
   };
 

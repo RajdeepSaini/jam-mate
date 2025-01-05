@@ -1,177 +1,116 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { Session, Track } from "@/types/session";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { searchTracks as spotifySearchTracks } from "@/services/spotify";
-import { supabase } from "@/integrations/supabase/client";
-import { useSessionStore } from "@/stores/sessionStore";
-import { nanoid } from 'nanoid';
-import { formatSession } from "@/utils/sessionFormatters";
-import { useSessionData } from "@/hooks/useSessionData";
 
 interface MusicSessionContextType {
+  sessions: Session[];
   currentSession: Session | null;
   currentTrack: Track | null;
   isPlaying: boolean;
-  sessions: Session[];
-  createSession: (name: string, isPublic: boolean) => Promise<string>;
-  joinSession: (sessionId: string) => Promise<void>;
-  leaveSession: () => Promise<void>;
+  createSession: (name: string, isPublic: boolean) => number;
+  joinSession: (sessionId: number) => void;
+  leaveSession: () => void;
   setIsPlaying: (playing: boolean) => void;
   searchTracks: (query: string) => Promise<Track[]>;
-  searchSessions: (query: string) => Promise<void>;
+  searchSessions: (query: string) => void;
 }
 
 const MusicSessionContext = createContext<MusicSessionContextType | undefined>(undefined);
 
 export const MusicSessionProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [sessions, setSessions] = useState<Session[]>([
+    { id: 1, name: "Chill Vibes", participants: 5, currentTrack: "Blinding Lights - The Weeknd", isPublic: true },
+    { id: 2, name: "Rock Classics", participants: 3, currentTrack: "Sweet Child O' Mine - Guns N' Roses", isPublic: true },
+    { id: 3, name: "Study Session", participants: 8, currentTrack: "Lo-fi beats", isPublic: false },
+  ]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const { setActiveSession } = useSessionStore();
-  const { sessions, searchSessions } = useSessionData();
 
-  const createSession = async (name: string, isPublic: boolean) => {
-    try {
-      const sessionCode = nanoid(6);
-      const { data: session, error } = await supabase
-        .from('sessions')
-        .insert({
-          name,
-          is_public: isPublic,
-          code: sessionCode,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .select()
-        .single();
+  const createSession = (name: string, isPublic: boolean) => {
+    const newSession = {
+      id: Math.floor(Math.random() * 10000),
+      name,
+      participants: 1,
+      isPublic,
+    };
+    setSessions([...sessions, newSession]);
+    setCurrentSession(newSession);
+    navigate(`/session/${newSession.id}`);
+    toast({
+      title: "Session Created",
+      description: `Session ID: ${newSession.id}`,
+    });
+    return newSession.id;
+  };
 
-      if (error) throw error;
-
-      await supabase
-        .from('session_participants')
-        .insert({
-          session_id: session.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      const formattedSession = formatSession(session);
-      setCurrentSession(formattedSession);
-      setActiveSession(session.id);
-      toast.success("Session created successfully!");
-      return session.id;
-    } catch (error) {
-      console.error('Error creating session:', error);
-      toast.error("Failed to create session");
-      throw error;
+  const joinSession = (sessionId: number) => {
+    const session = sessions.find((s) => s.id === sessionId);
+    if (session) {
+      const updatedSession = { ...session, participants: session.participants + 1 };
+      setSessions(sessions.map((s) => (s.id === sessionId ? updatedSession : s)));
+      setCurrentSession(updatedSession);
+      setCurrentTrack({
+        id: "placeholder-id",
+        title: "Blinding Lights",
+        artist: "The Weeknd",
+        albumArt: "https://via.placeholder.com/56",
+      });
+      navigate(`/session/${sessionId}`);
+      toast({
+        title: "Session Joined",
+        description: `You've joined ${session.name}`,
+      });
     }
   };
 
-  const joinSession = async (sessionId: string) => {
-    try {
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      
-      const { error: joinError } = await supabase
-        .from('session_participants')
-        .insert({
-          session_id: sessionId,
-          user_id: userId
-        });
-
-      if (joinError) throw joinError;
-
-      const formattedSession = formatSession(session);
-      setCurrentSession(formattedSession);
-      setActiveSession(session.id);
-      toast.success(`Joined session: ${session.name}`);
-    } catch (error) {
-      console.error('Error joining session:', error);
-      toast.error("Failed to join session");
-      throw error;
-    }
-  };
-
-  const leaveSession = async () => {
-    if (!currentSession) return;
-
-    try {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      
-      const { error } = await supabase
-        .from('session_participants')
-        .delete()
-        .match({ 
-          session_id: currentSession.id,
-          user_id: userId
-        });
-
-      if (error) throw error;
-
+  const leaveSession = () => {
+    if (currentSession) {
+      const updatedSession = { ...currentSession, participants: currentSession.participants - 1 };
+      setSessions(sessions.map((s) => (s.id === currentSession.id ? updatedSession : s)));
       setCurrentSession(null);
       setCurrentTrack(null);
       setIsPlaying(false);
-      setActiveSession(null);
       navigate('/');
-      toast.success("Left session successfully");
-    } catch (error) {
-      console.error('Error leaving session:', error);
-      toast.error("Failed to leave session");
+      toast({
+        title: "Session Left",
+        description: "You've left the session",
+      });
     }
   };
 
   const searchTracks = async (query: string): Promise<Track[]> => {
     try {
       const tracks = await spotifySearchTracks(query);
+      console.log("Spotify search results:", tracks);
       return tracks;
     } catch (error) {
       console.error("Error searching tracks:", error);
-      toast.error("Failed to search tracks");
+      toast({
+        title: "Error",
+        description: "Failed to search tracks",
+        variant: "destructive",
+      });
       return [];
     }
   };
 
-  useEffect(() => {
-    if (!currentSession) return;
-
-    const channel = supabase
-      .channel(`session:${currentSession.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sessions',
-          filter: `id=eq.${currentSession.id}`
-        },
-        (payload) => {
-          if (payload.new) {
-            const formattedSession = formatSession(payload.new);
-            setCurrentSession(formattedSession);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentSession]);
+  const searchSessions = (query: string) => {
+    console.log("Searching for sessions:", query);
+    // TODO: Implement session search
+  };
 
   return (
     <MusicSessionContext.Provider
       value={{
+        sessions,
         currentSession,
         currentTrack,
         isPlaying,
-        sessions,
         createSession,
         joinSession,
         leaveSession,
