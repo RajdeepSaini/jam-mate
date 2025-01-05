@@ -29,11 +29,11 @@ export const SessionList = ({ sessions, onJoinSession }: SessionListProps) => {
       {sessions.map((session) => (
         <SessionCard
           key={session.id}
-          name={session.name}
+          name={session.name || 'Unnamed Session'}
           participants={session.participants || 0}
           currentTrack={session.current_track?.title}
           onJoin={() => onJoinSession(session.id)}
-          isPublic={session.is_public}
+          isPublic={session.is_public || false}
           sessionId={session.id}
         />
       ))}

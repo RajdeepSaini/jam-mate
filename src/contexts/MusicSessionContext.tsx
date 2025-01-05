@@ -30,10 +30,11 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
   const [sessions, setSessions] = useState<Session[]>([]);
   const { setActiveSession } = useSessionStore();
 
-  // Fetch sessions on mount
-  useEffect(() => {
-    fetchSessions();
-  }, []);
+  const formatSession = (session: any): Session => ({
+    ...session,
+    current_track: session.current_track ? JSON.parse(session.current_track) : null,
+    participants: session.session_participants?.[0]?.count || 0,
+  });
 
   const fetchSessions = async () => {
     try {
@@ -49,11 +50,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
-      const formattedSessions = sessionsData.map(session => ({
-        ...session,
-        participants: session.session_participants?.[0]?.count || 0
-      }));
-
+      const formattedSessions = sessionsData.map(formatSession);
       setSessions(formattedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -210,7 +207,7 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         (payload) => {
           console.log('Session updated:', payload);
           if (payload.new) {
-            setCurrentSession(payload.new as Session);
+            setCurrentSession(formatSession(payload.new));
           }
         }
       )
