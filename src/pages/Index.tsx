@@ -52,10 +52,10 @@ const Index = () => {
     checkAuth();
   }, [navigate]);
 
-  const handleCreateSession = (e: React.FormEvent) => {
+  const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newSessionName.trim()) {
-      const sessionId = createSession(newSessionName.trim(), isPublic);
+      const sessionId = await createSession(newSessionName.trim(), isPublic);
       setNewSessionName("");
       setIsCreateDialogOpen(false);
       toast.success("Session created successfully!");
@@ -63,7 +63,7 @@ const Index = () => {
     }
   };
 
-  const handleJoinSession = (sessionId: number) => {
+  const handleJoinSession = (sessionId: string) => {
     joinSession(sessionId);
     toast.success("Joined session successfully!");
     navigate(`/session/${sessionId}`);
@@ -71,8 +71,8 @@ const Index = () => {
 
   const handleJoinPrivateSession = (e: React.FormEvent) => {
     e.preventDefault();
-    const sessionId = parseInt(sessionIdInput);
-    if (!isNaN(sessionId)) {
+    const sessionId = sessionIdInput;
+    if (sessionId) {
       handleJoinSession(sessionId);
     } else {
       toast.error("Invalid session ID");

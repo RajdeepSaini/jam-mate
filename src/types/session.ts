@@ -8,11 +8,15 @@ export interface Track {
 }
 
 export interface Session {
-  id: number;
+  id: string;
+  code: string;
   name: string;
-  participants: number;
-  currentTrack?: string;
-  isPublic: boolean;
+  created_by: string;
+  created_at: string;
+  current_track: Track | null;
+  is_playing: boolean;
+  is_public: boolean;
+  participants?: number;
 }
 
 export interface ChatMessage {

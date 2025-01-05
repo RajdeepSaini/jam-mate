@@ -11,11 +11,13 @@ interface MusicSessionContextType {
   currentSession: Session | null;
   currentTrack: Track | null;
   isPlaying: boolean;
+  sessions: Session[];
   createSession: (name: string, isPublic: boolean) => Promise<string>;
   joinSession: (sessionId: string) => Promise<void>;
   leaveSession: () => Promise<void>;
   setIsPlaying: (playing: boolean) => void;
   searchTracks: (query: string) => Promise<Track[]>;
+  searchSessions: (query: string) => Promise<void>;
 }
 
 const MusicSessionContext = createContext<MusicSessionContextType | undefined>(undefined);
@@ -25,7 +27,66 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const { setActiveSession } = useSessionStore();
+
+  // Fetch sessions on mount
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const { data: sessionsData, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          session_participants (
+            count
+          )
+        `)
+        .eq('is_public', true);
+
+      if (error) throw error;
+
+      const formattedSessions = sessionsData.map(session => ({
+        ...session,
+        participants: session.session_participants?.[0]?.count || 0
+      }));
+
+      setSessions(formattedSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      toast.error("Failed to fetch sessions");
+    }
+  };
+
+  const searchSessions = async (query: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          session_participants (
+            count
+          )
+        `)
+        .eq('is_public', true)
+        .ilike('name', `%${query}%`);
+
+      if (error) throw error;
+
+      const formattedSessions = data.map(session => ({
+        ...session,
+        participants: session.session_participants?.[0]?.count || 0
+      }));
+
+      setSessions(formattedSessions);
+    } catch (error) {
+      console.error('Error searching sessions:', error);
+      toast.error("Failed to search sessions");
+    }
+  };
 
   const createSession = async (name: string, isPublic: boolean) => {
     try {
@@ -166,11 +227,13 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         currentSession,
         currentTrack,
         isPlaying,
+        sessions,
         createSession,
         joinSession,
         leaveSession,
         setIsPlaying,
         searchTracks,
+        searchSessions,
       }}
     >
       {children}
