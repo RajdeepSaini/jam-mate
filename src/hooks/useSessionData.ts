@@ -13,7 +13,7 @@ export const useSessionData = () => {
         .from('sessions')
         .select(`
           *,
-          participants:session_participants(count)
+          participant_count:session_participants!inner(count)
         `)
         .eq('is_public', true);
 
@@ -22,7 +22,7 @@ export const useSessionData = () => {
       const formattedSessions = sessionsData.map(session => {
         return formatSession({
           ...session,
-          participants: session.participants?.[0]?.count || 0
+          participants: session.participant_count?.[0]?.count || 0
         });
       });
 
@@ -39,7 +39,7 @@ export const useSessionData = () => {
         .from('sessions')
         .select(`
           *,
-          participants:session_participants(count)
+          participant_count:session_participants!inner(count)
         `)
         .eq('is_public', true)
         .ilike('name', `%${query}%`);
@@ -49,7 +49,7 @@ export const useSessionData = () => {
       const formattedSessions = sessionsData.map(session => {
         return formatSession({
           ...session,
-          participants: session.participants?.[0]?.count || 0
+          participants: session.participant_count?.[0]?.count || 0
         });
       });
 
