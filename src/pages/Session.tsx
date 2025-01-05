@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Session = () => {
-  const { sessionId } = useParams();
+  const { sessionId } = useParams<{ sessionId: string }>();
   const {
     currentSession,
     currentTrack,
@@ -24,7 +24,8 @@ const Session = () => {
     searchTracks,
   } = useMusicSession();
   
-  const { messages, sendMessage } = useSessionChat(Number(sessionId));
+  const { messages, sendMessage } = useSessionChat(sessionId || '');
+
   const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
   const [searchResults, setSearchResults] = useState<Track[]>([]);

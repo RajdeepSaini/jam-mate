@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { searchTracks as spotifySearchTracks } from "@/services/spotify";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface MusicSessionContextType {
   currentSession: Session | null;
@@ -45,7 +44,6 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
-      // Join the session as the creator
       await supabase
         .from('session_participants')
         .insert({
@@ -59,7 +57,11 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         code: session.code,
         created_by: session.created_by,
         is_public: session.is_public,
-        current_track: session.current_track ? JSON.parse(session.current_track as string) as Track : null,
+        current_track: session.current_track ? 
+          (typeof session.current_track === 'string' ? 
+            JSON.parse(session.current_track) as Track : 
+            session.current_track as Track) : 
+          null,
         is_playing: session.is_playing,
         participants: [],
       };
@@ -87,7 +89,6 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Check if session exists
       const { data: session, error: sessionError } = await supabase
         .from('sessions')
         .select('*')
@@ -96,7 +97,6 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (sessionError) throw new Error("Session not found");
 
-      // Join the session
       const { error: joinError } = await supabase
         .from('session_participants')
         .insert({
@@ -106,7 +106,22 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
 
       if (joinError) throw joinError;
 
-      setCurrentSession(session);
+      const sessionData: Session = {
+        id: session.id,
+        name: session.name,
+        code: session.code,
+        created_by: session.created_by,
+        is_public: session.is_public,
+        current_track: session.current_track ? 
+          (typeof session.current_track === 'string' ? 
+            JSON.parse(session.current_track) as Track : 
+            session.current_track as Track) : 
+          null,
+        is_playing: session.is_playing,
+        participants: [],
+      };
+
+      setCurrentSession(sessionData);
       navigate(`/session/${sessionId}`);
       toast({
         title: "Session Joined",
