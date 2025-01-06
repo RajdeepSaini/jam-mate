@@ -31,12 +31,12 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
         currentSession: session,
       }));
 
-      navigate(`/session/${session._id}`);
+      navigate(`/session/${session.id}`);
       toast({
         title: "Session Created",
         description: `Session code: ${session.code}`,
       });
-      return session._id!;
+      return session.id;
     } catch (error) {
       console.error("Error creating session:", error);
       toast({
@@ -75,10 +75,10 @@ export const MusicSessionProvider = ({ children }: { children: React.ReactNode }
   };
 
   const leaveSession = async () => {
-    if (state.currentSession?._id) {
+    if (state.currentSession?.id) {
       try {
         const user = await getCurrentUser();
-        await leaveSessionInMongoDB(state.currentSession._id, user.id);
+        await leaveSessionInMongoDB(state.currentSession.id, user.id);
         
         setState({
           currentSession: null,

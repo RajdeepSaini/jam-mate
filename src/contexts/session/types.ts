@@ -7,7 +7,7 @@ export interface SessionState {
 }
 
 export interface Session {
-  _id?: string;
+  id: string;
   name: string;
   code: string;
   created_by: string;

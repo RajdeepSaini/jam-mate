@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Session, Track } from "@/types/session";
+import { parseTrackData } from "@/utils/typeGuards";
 
 export async function createSessionInMongoDB(
   name: string,
@@ -92,13 +93,15 @@ export async function joinSessionInMongoDB(
 
   if (updateError) throw updateError;
 
+  const currentTrack = parseTrackData(updatedSession.current_track);
+
   return {
     id: updatedSession.id,
     name: updatedSession.name || '',
     code: updatedSession.code,
     created_by: updatedSession.created_by,
     is_public: updatedSession.is_public || false,
-    current_track: updatedSession.current_track as Track | null,
+    current_track: currentTrack,
     is_playing: updatedSession.is_playing || false,
     participants: updatedSession.session_participants.map((p: { user_id: string }) => p.user_id)
   };
@@ -118,7 +121,8 @@ export async function leaveSessionInMongoDB(
 }
 
 export async function searchTracksSpotify(query: string): Promise<Track[]> {
-  return spotifySearchTracks(query);
+  // This will be implemented later when we integrate with Spotify
+  return [];
 }
 
 export async function getCurrentUser() {
