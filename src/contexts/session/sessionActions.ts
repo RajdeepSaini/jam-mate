@@ -1,82 +1,120 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "./types";
-import { searchTracks as spotifySearchTracks } from "@/services/spotify";
-import { Track } from "@/types/session";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { Session, Track } from "@/types/session";
 
 export async function createSessionInMongoDB(
   name: string,
   isPublic: boolean,
   userId: string
 ): Promise<Session> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/session-management`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabase.auth.getSession()}`
-    },
-    body: JSON.stringify({
-      action: 'create',
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  
+  const { data: session, error } = await supabase
+    .from('sessions')
+    .insert({
       name,
-      isPublic,
-      userId
+      code,
+      created_by: userId,
+      is_public: isPublic
     })
-  });
+    .select('*')
+    .single();
 
-  if (!response.ok) {
-    throw new Error('Failed to create session');
-  }
+  if (error) throw error;
 
-  const session = await response.json();
-  return session;
+  // Also join the session as a participant
+  const { error: participantError } = await supabase
+    .from('session_participants')
+    .insert({
+      session_id: session.id,
+      user_id: userId
+    });
+
+  if (participantError) throw participantError;
+
+  return {
+    id: session.id,
+    name: session.name || '',
+    code: session.code,
+    created_by: session.created_by,
+    is_public: session.is_public || false,
+    current_track: null,
+    is_playing: false,
+    participants: [userId]
+  };
 }
 
 export async function joinSessionInMongoDB(
   sessionId: string,
   userId: string
 ): Promise<Session> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/session-management`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabase.auth.getSession()}`
-    },
-    body: JSON.stringify({
-      action: 'join',
-      sessionId,
-      userId
-    })
-  });
+  // First, check if the session exists and is accessible
+  const { data: session, error: sessionError } = await supabase
+    .from('sessions')
+    .select(`
+      *,
+      session_participants (
+        user_id
+      )
+    `)
+    .eq('id', sessionId)
+    .single();
 
-  if (!response.ok) {
-    throw new Error('Failed to join session');
+  if (sessionError) throw new Error('Session not found or not accessible');
+
+  // Check if user is already a participant
+  const isAlreadyParticipant = session.session_participants.some(
+    (p: { user_id: string }) => p.user_id === userId
+  );
+
+  if (!isAlreadyParticipant) {
+    // Join the session
+    const { error: joinError } = await supabase
+      .from('session_participants')
+      .insert({
+        session_id: sessionId,
+        user_id: userId
+      });
+
+    if (joinError) throw joinError;
   }
 
-  const session = await response.json();
-  return session;
+  // Get updated session data
+  const { data: updatedSession, error: updateError } = await supabase
+    .from('sessions')
+    .select(`
+      *,
+      session_participants (
+        user_id
+      )
+    `)
+    .eq('id', sessionId)
+    .single();
+
+  if (updateError) throw updateError;
+
+  return {
+    id: updatedSession.id,
+    name: updatedSession.name || '',
+    code: updatedSession.code,
+    created_by: updatedSession.created_by,
+    is_public: updatedSession.is_public || false,
+    current_track: updatedSession.current_track as Track | null,
+    is_playing: updatedSession.is_playing || false,
+    participants: updatedSession.session_participants.map((p: { user_id: string }) => p.user_id)
+  };
 }
 
 export async function leaveSessionInMongoDB(
   sessionId: string,
   userId: string
 ): Promise<void> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/session-management`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabase.auth.getSession()}`
-    },
-    body: JSON.stringify({
-      action: 'leave',
-      sessionId,
-      userId
-    })
-  });
+  const { error } = await supabase
+    .from('session_participants')
+    .delete()
+    .eq('session_id', sessionId)
+    .eq('user_id', userId);
 
-  if (!response.ok) {
-    throw new Error('Failed to leave session');
-  }
+  if (error) throw error;
 }
 
 export async function searchTracksSpotify(query: string): Promise<Track[]> {

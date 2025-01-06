@@ -53,7 +53,9 @@ const Index = () => {
         .from('sessions')
         .select(`
           *,
-          participants:session_participants(user_id)
+          session_participants (
+            user_id
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -65,9 +67,9 @@ const Index = () => {
         code: session.code,
         created_by: session.created_by,
         is_public: session.is_public || false,
-        current_track: session.current_track,
+        current_track: session.current_track as Track | null,
         is_playing: session.is_playing || false,
-        participants: session.participants.map((p: any) => p.user_id)
+        participants: session.session_participants.map((p: { user_id: string }) => p.user_id)
       }));
 
       setSessions(formattedSessions);
