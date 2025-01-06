@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/Layout/UserMenu";
+import { SessionList } from "@/components/MusicSession/SessionList";
+import { Session } from "@/types/session";
 
 const Index = () => {
   const { createSession, joinSession } = useMusicSession();
@@ -18,6 +20,7 @@ const Index = () => {
   const [sessionIdInput, setSessionIdInput] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [sessions, setSessions] = useState<Session[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,7 +44,38 @@ const Index = () => {
     };
 
     checkAuth();
+    fetchSessions();
   }, [navigate]);
+
+  const fetchSessions = async () => {
+    try {
+      const { data: sessionsData, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          participants:session_participants(user_id)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedSessions: Session[] = sessionsData.map(session => ({
+        id: session.id,
+        name: session.name || '',
+        code: session.code,
+        created_by: session.created_by,
+        is_public: session.is_public || false,
+        current_track: session.current_track,
+        is_playing: session.is_playing || false,
+        participants: session.participants.map((p: any) => p.user_id)
+      }));
+
+      setSessions(formattedSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      toast.error('Failed to load sessions');
+    }
+  };
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +85,7 @@ const Index = () => {
         setNewSessionName("");
         setIsCreateDialogOpen(false);
         toast.success("Session created successfully!");
+        fetchSessions(); // Refresh the sessions list
       } catch (error) {
         toast.error("Failed to create session");
       }
@@ -130,23 +165,30 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="max-w-md mx-auto mt-12">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Join a Session</h2>
-            <form onSubmit={handleJoinSession} className="space-y-4">
-              <div>
-                <Label htmlFor="sessionId">Session ID</Label>
-                <Input
-                  id="sessionId"
-                  placeholder="Enter session ID"
-                  value={sessionIdInput}
-                  onChange={(e) => setSessionIdInput(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Join Session
-              </Button>
-            </form>
+        <div className="grid gap-8">
+          <div className="max-w-md mx-auto">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">Join a Session</h2>
+              <form onSubmit={handleJoinSession} className="space-y-4">
+                <div>
+                  <Label htmlFor="sessionId">Session ID</Label>
+                  <Input
+                    id="sessionId"
+                    placeholder="Enter session ID"
+                    value={sessionIdInput}
+                    onChange={(e) => setSessionIdInput(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Join Session
+                </Button>
+              </form>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-2xl font-semibold mb-6">Available Sessions</h2>
+            <SessionList sessions={sessions} onJoinSession={joinSession} />
           </div>
         </div>
       </div>
