@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/Layout/UserMenu";
 import { SessionList } from "@/components/MusicSession/SessionList";
-import { Session } from "@/types/session";
+import { Session, Track } from "@/types/session";
 import { parseTrackData } from "@/utils/typeGuards";
 
 const Index = () => {
