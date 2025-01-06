@@ -262,7 +262,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      session_participants_view: {
+        Row: {
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
