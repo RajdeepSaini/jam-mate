@@ -37,17 +37,21 @@ const Login = () => {
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN") {
+      if (event === "SIGNED_IN" && session?.user?.id) {
         try {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
-            .eq('id', session?.user.id)
-            .single();
+            .select('favorite_genres')
+            .eq('id', session.user.id)
+            .maybeSingle();
 
-          if (profileError) throw profileError;
+          if (profileError) {
+            console.error("Profile error:", profileError);
+            setError("Error fetching user profile");
+            return;
+          }
 
-          if (!profile.favorite_genres || profile.favorite_genres.length === 0) {
+          if (!profile || !profile.favorite_genres || profile.favorite_genres.length === 0) {
             setShowGenreSelect(true);
           } else {
             toast.success("Successfully signed in!");
