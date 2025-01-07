@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Google, Music2, Discord } from "lucide-react";
+import { Chrome, Music2Icon, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -36,7 +36,7 @@ export const SocialAuth = () => {
           className="bg-music-gray/50 border-music-gray"
           onClick={() => handleSocialLogin('google')}
         >
-          <Google className="mr-2 h-4 w-4" />
+          <Chrome className="mr-2 h-4 w-4" />
           Google
         </Button>
         <Button 
@@ -44,7 +44,7 @@ export const SocialAuth = () => {
           className="bg-music-gray/50 border-music-gray"
           onClick={() => handleSocialLogin('discord')}
         >
-          <Discord className="mr-2 h-4 w-4" />
+          <MessageSquare className="mr-2 h-4 w-4" />
           Discord
         </Button>
         <Button 
@@ -52,7 +52,7 @@ export const SocialAuth = () => {
           className="bg-music-gray/50 border-music-gray"
           onClick={() => handleSocialLogin('spotify')}
         >
-          <Music2 className="mr-2 h-4 w-4" />
+          <Music2Icon className="mr-2 h-4 w-4" />
           Spotify
         </Button>
       </div>
