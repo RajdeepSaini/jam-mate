@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const GENRES = [
   "Pop", "Rock", "Hip Hop", "R&B", "Jazz", "Classical", "Electronic", 
@@ -18,10 +19,16 @@ const Login = () => {
   const navigate = useNavigate();
   const [showGenreSelect, setShowGenreSelect] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error("Session error:", sessionError);
+        setError(sessionError.message);
+        return;
+      }
       if (session) {
         navigate("/");
       }
@@ -31,7 +38,25 @@ const Login = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN") {
-        setShowGenreSelect(true);
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session?.user.id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          if (!profile.favorite_genres || profile.favorite_genres.length === 0) {
+            setShowGenreSelect(true);
+          } else {
+            toast.success("Successfully signed in!");
+            navigate("/");
+          }
+        } catch (error) {
+          console.error("Profile error:", error);
+          setError("Error fetching user profile");
+        }
       }
     });
 
@@ -49,18 +74,21 @@ const Login = () => {
   const handleGenreSubmit = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({ favorite_genres: selectedGenres })
-          .eq('id', user.id);
-        
-        toast.success("Successfully signed in!");
-        navigate("/");
-      }
+      if (!user) throw new Error("No user found");
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ favorite_genres: selectedGenres })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+      
+      toast.success("Successfully updated preferences!");
+      navigate("/");
     } catch (error) {
       console.error('Error updating genres:', error);
       toast.error("Failed to save preferences");
+      setError("Failed to update preferences");
     }
   };
 
@@ -68,6 +96,13 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold text-center mb-6">Welcome to Jam Mate</h1>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <Auth
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
