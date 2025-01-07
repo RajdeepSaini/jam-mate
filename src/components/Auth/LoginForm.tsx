@@ -33,6 +33,23 @@ export const LoginForm = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset email sent!");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
@@ -78,6 +95,14 @@ export const LoginForm = () => {
           </button>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={handleForgotPassword}
+        className="text-sm text-music-primary hover:text-music-accent"
+      >
+        Forgot your password?
+      </button>
 
       <Button type="submit" className="w-full bg-music-primary hover:bg-music-accent" disabled={loading}>
         {loading ? "Tuning in..." : "Let's Jam"}

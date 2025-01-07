@@ -2,23 +2,30 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
+    username: "",
     password: "",
-    displayName: "",
-    bio: "",
-    location: "",
+    confirmPassword: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match!");
+      setLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -26,14 +33,12 @@ export const SignupForm = () => {
         password: formData.password,
         options: {
           data: {
-            display_name: formData.displayName,
+            username: formData.username,
           },
         },
       });
 
       if (error) throw error;
-
-      // Profile will be created automatically via database trigger
       toast.success("Signup successful! Please check your email for verification.");
     } catch (error: any) {
       toast.error(error.message);
@@ -42,7 +47,7 @@ export const SignupForm = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -58,58 +63,74 @@ export const SignupForm = () => {
           name="email"
           type="email"
           required
+          placeholder="Your email address"
           value={formData.email}
           onChange={handleChange}
+          className="bg-music-gray/50 border-music-gray"
         />
       </div>
 
       <div>
+        <Label htmlFor="username">Username</Label>
+        <Input
+          id="username"
+          name="username"
+          required
+          placeholder="Pick your music alias"
+          value={formData.username}
+          onChange={handleChange}
+          className="bg-music-gray/50 border-music-gray"
+        />
+      </div>
+
+      <div className="relative">
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          required
-          value={formData.password}
-          onChange={handleChange}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            required
+            placeholder="Create your password"
+            value={formData.password}
+            onChange={handleChange}
+            className="bg-music-gray/50 border-music-gray pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
       </div>
 
-      <div>
-        <Label htmlFor="displayName">Display Name</Label>
-        <Input
-          id="displayName"
-          name="displayName"
-          required
-          value={formData.displayName}
-          onChange={handleChange}
-        />
+      <div className="relative">
+        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <div className="relative">
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            required
+            placeholder="Confirm your password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className="bg-music-gray/50 border-music-gray pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+          >
+            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
       </div>
 
-      <div>
-        <Label htmlFor="bio">Bio</Label>
-        <Textarea
-          id="bio"
-          name="bio"
-          value={formData.bio}
-          onChange={handleChange}
-          placeholder="Tell us about yourself..."
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          name="location"
-          value={formData.location}
-          onChange={handleChange}
-          placeholder="City, Country"
-        />
-      </div>
-
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing up..." : "Sign Up"}
+      <Button type="submit" className="w-full bg-music-primary hover:bg-music-accent" disabled={loading}>
+        {loading ? "Creating your account..." : "Join the Groove"}
       </Button>
     </form>
   );
