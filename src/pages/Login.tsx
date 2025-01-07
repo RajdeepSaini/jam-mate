@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SignupForm } from "@/components/Auth/SignupForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const GENRES = [
   "Pop", "Rock", "Hip Hop", "R&B", "Jazz", "Classical", "Electronic", 
@@ -20,6 +22,7 @@ const Login = () => {
   const [showGenreSelect, setShowGenreSelect] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("login");
 
   useEffect(() => {
     const checkUser = async () => {
@@ -39,7 +42,6 @@ const Login = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user?.id) {
         try {
-          // First, check if the profile exists
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('favorite_genres')
@@ -52,7 +54,6 @@ const Login = () => {
             return;
           }
 
-          // If no profile or no genres, show genre selection
           if (!profile || !profile.favorite_genres || profile.favorite_genres.length === 0) {
             setShowGenreSelect(true);
           } else {
@@ -113,12 +114,24 @@ const Login = () => {
           </Alert>
         )}
 
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
-          theme="light"
-          providers={[]}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <Auth
+              supabaseClient={supabase}
+              appearance={{ theme: ThemeSupa }}
+              theme="light"
+              providers={[]}
+              view="sign_in"
+            />
+          </TabsContent>
+          <TabsContent value="signup">
+            <SignupForm />
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={showGenreSelect} onOpenChange={setShowGenreSelect}>
           <DialogContent className="sm:max-w-md">
