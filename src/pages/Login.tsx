@@ -1,18 +1,19 @@
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SignupForm } from "@/components/Auth/SignupForm";
+import { LoginForm } from "@/components/Auth/LoginForm";
+import { SocialAuth } from "@/components/Auth/SocialAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Disc3, Music2, Sparkles } from "lucide-react";
+import { Music2, Sparkles } from "lucide-react";
 import AnimatedBackground from "@/components/Auth/AnimatedBackground";
+import AuthGraphic from "@/components/Auth/AuthGraphic";
+import { Button } from "@/components/ui/button";
 
 const GENRES = [
   "Pop", "Rock", "Hip Hop", "R&B", "Jazz", "Classical", "Electronic", 
@@ -109,24 +110,8 @@ const Login = () => {
     <div className="min-h-screen flex relative overflow-hidden">
       <AnimatedBackground />
       
-      {/* Left Side - Graphic */}
-      <div className="hidden lg:flex w-1/2 items-center justify-center relative p-12">
-        <div className="text-center space-y-8 relative z-10">
-          <div className="animate-spin-slow">
-            <Disc3 className="w-48 h-48 text-music-primary opacity-80" />
-          </div>
-          <div className="space-y-4">
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-music-primary to-purple-500 bg-clip-text text-transparent">
-              Your Music Journey Starts Here
-            </h2>
-            <p className="text-gray-400 text-lg max-w-md mx-auto">
-              Join our community of music lovers and share your favorite tunes with friends
-            </p>
-          </div>
-        </div>
-      </div>
+      <AuthGraphic />
 
-      {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8 relative">
           <div className="text-center space-y-2">
@@ -155,31 +140,9 @@ const Login = () => {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="login" className="space-y-4">
-                <Auth
-                  supabaseClient={supabase}
-                  appearance={{
-                    theme: ThemeSupa,
-                    variables: {
-                      default: {
-                        colors: {
-                          brand: '#1DB954',
-                          brandAccent: '#1ED760',
-                          inputBackground: 'transparent',
-                          inputText: 'white',
-                        },
-                      },
-                    },
-                    className: {
-                      container: 'space-y-4',
-                      button: 'w-full bg-music-primary hover:bg-music-accent text-white font-semibold py-2 px-4 rounded transition-colors',
-                      input: 'w-full bg-music-gray/50 border-music-gray text-white rounded p-2 focus:ring-music-primary focus:border-music-primary',
-                    },
-                  }}
-                  theme="dark"
-                  providers={[]}
-                  view="sign_in"
-                />
+              <TabsContent value="login" className="space-y-6">
+                <LoginForm />
+                <SocialAuth />
               </TabsContent>
               
               <TabsContent value="signup">
