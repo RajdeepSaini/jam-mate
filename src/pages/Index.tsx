@@ -68,7 +68,7 @@ const Index = () => {
         code: session.code,
         created_by: session.created_by,
         is_public: session.is_public || false,
-        current_track: session.current_track as Track | null,
+        current_track: parseTrackData(session.current_track),
         is_playing: session.is_playing || false,
         participants: session.session_participants.map((p: { user_id: string }) => p.user_id)
       }));
