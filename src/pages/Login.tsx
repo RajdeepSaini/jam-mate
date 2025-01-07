@@ -39,6 +39,7 @@ const Login = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user?.id) {
         try {
+          // First, check if the profile exists
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('favorite_genres')
@@ -51,6 +52,7 @@ const Login = () => {
             return;
           }
 
+          // If no profile or no genres, show genre selection
           if (!profile || !profile.favorite_genres || profile.favorite_genres.length === 0) {
             setShowGenreSelect(true);
           } else {
@@ -78,14 +80,18 @@ const Login = () => {
   const handleGenreSubmit = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      if (!user) {
+        throw new Error("No user found");
+      }
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ favorite_genres: selectedGenres })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        throw updateError;
+      }
       
       toast.success("Successfully updated preferences!");
       navigate("/");
