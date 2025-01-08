@@ -83,6 +83,13 @@ const Session = () => {
     handleAddToQueue(track);
   };
 
+  const handleSendMessage = async (message: string) => {
+    const success = await sendMessage(message);
+    if (!success) {
+      toast.error('Failed to send message');
+    }
+  };
+
   if (!currentSession) {
     return <div>Session not found</div>;
   }
@@ -147,7 +154,7 @@ const Session = () => {
         </div>
 
         <div className="col-span-3">
-          <ChatSection messages={messages} onSendMessage={sendMessage} />
+          <ChatSection messages={messages} onSendMessage={handleSendMessage} />
         </div>
       </div>
 
