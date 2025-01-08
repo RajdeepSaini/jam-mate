@@ -36,19 +36,21 @@ const Session = () => {
       if (!session) {
         toast.error('Please sign in to access this page');
         navigate('/login');
+        return;
       }
-    };
-    
-    checkAuth();
-  }, [navigate]);
 
-  useEffect(() => {
-    const loadRecommendations = async () => {
+      // Load recommendations based on user's profile
       try {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('favorite_genres')
-          .single();
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching profile:', error);
+          return;
+        }
 
         if (profile?.favorite_genres?.length) {
           const genre = profile.favorite_genres[Math.floor(Math.random() * profile.favorite_genres.length)];
@@ -60,9 +62,9 @@ const Session = () => {
         toast.error('Failed to load recommendations');
       }
     };
-
-    loadRecommendations();
-  }, []);
+    
+    checkAuth();
+  }, [navigate]);
 
   const handleAddToQueue = (track: Track) => {
     setQueue(prev => [...prev, track]);
