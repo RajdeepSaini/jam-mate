@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Session = () => {
+  const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
   const {
     currentSession,
@@ -30,47 +31,19 @@ const Session = () => {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { display_name: string }>>({});
 
   useEffect(() => {
-    if (!sessionId) return;
-
-    // Subscribe to new messages
-    const channel = supabase
-      .channel('session_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'session_messages',
-          filter: `session_id=eq.${sessionId}`,
-        },
-        async (payload) => {
-          const { user_id } = payload.new;
-          // Fetch user profile if not already cached
-          if (!profiles[user_id]) {
-            const { data } = await supabase
-              .from('profiles')
-              .select('display_name')
-              .eq('id', user_id)
-              .single();
-            
-            if (data) {
-              setProfiles(prev => ({
-                ...prev,
-                [user_id]: data
-              }));
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    // Check authentication status
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to access this page');
+        navigate('/login');
+      }
     };
-  }, [sessionId]);
+    
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -102,19 +75,9 @@ const Session = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (messageInput.trim() && sessionId) {
-      try {
-        const { error } = await supabase
-          .from('session_messages')
-          .insert({
-            session_id: sessionId,
-            message: messageInput.trim(),
-          });
-
-        if (error) throw error;
+      const success = await sendMessage(messageInput.trim());
+      if (success) {
         setMessageInput("");
-      } catch (error) {
-        console.error('Error sending message:', error);
-        toast.error('Failed to send message');
       }
     }
   };
@@ -140,7 +103,6 @@ const Session = () => {
   return (
     <div className="min-h-screen pb-24">
       <div className="container mx-auto py-8 grid grid-cols-12 gap-6">
-        {/* Left Column - Song Search */}
         <div className="col-span-3 glass-morphism p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-4">
             <Music className="h-5 w-5" />
@@ -150,7 +112,6 @@ const Session = () => {
           <SearchResults tracks={searchResults} onSelectTrack={handleSelectTrack} />
         </div>
 
-        {/* Middle Column - Tabs */}
         <div className="col-span-6 glass-morphism p-4 rounded-lg">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
@@ -213,12 +174,12 @@ const Session = () => {
                 >
                   <div className="flex items-start gap-2">
                     <div className="rounded-full bg-primary w-8 h-8 flex items-center justify-center text-primary-foreground">
-                      {profiles[message.userId]?.display_name?.charAt(0).toUpperCase() || message.userId.charAt(0).toUpperCase()}
+                      {message.displayName?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">
-                          {profiles[message.userId]?.display_name || 'Unknown User'}
+                          {message.displayName || 'Unknown User'}
                         </span>
                         <span className="text-xs text-gray-400">
                           {new Date(message.timestamp).toLocaleTimeString()}
