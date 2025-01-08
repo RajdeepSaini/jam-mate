@@ -9,7 +9,6 @@ export const useSessionChat = (sessionId: string) => {
   useEffect(() => {
     if (!sessionId) return;
 
-    // Fetch existing messages
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('session_messages')
@@ -37,14 +36,13 @@ export const useSessionChat = (sessionId: string) => {
           userId: msg.user_id,
           message: msg.message,
           timestamp: new Date(msg.created_at),
-          displayName: msg.profiles?.display_name
+          displayName: msg.profiles?.display_name || 'Unknown User'
         }))
       );
     };
 
     fetchMessages();
 
-    // Subscribe to new messages
     const channel = supabase
       .channel('session_messages')
       .on(
@@ -56,7 +54,6 @@ export const useSessionChat = (sessionId: string) => {
           filter: `session_id=eq.${sessionId}`,
         },
         async (payload) => {
-          // Fetch the complete message data including profile
           const { data, error } = await supabase
             .from('session_messages')
             .select(`
@@ -82,7 +79,7 @@ export const useSessionChat = (sessionId: string) => {
             userId: data.user_id,
             message: data.message,
             timestamp: new Date(data.created_at),
-            displayName: data.profiles?.display_name
+            displayName: data.profiles?.display_name || 'Unknown User'
           };
           
           setMessages((prev) => [...prev, newMessage]);

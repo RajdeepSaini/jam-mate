@@ -5,14 +5,14 @@ import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
 import { useSessionChat } from "@/hooks/useSessionChat";
-import { MessageSquare, Music, Send } from "lucide-react";
+import { Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchResults } from "@/components/MusicSession/SearchResults";
 import { Track } from "@/types/session";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ChatSection } from "@/components/MusicSession/ChatSection";
+import { searchTracks } from "@/services/spotify";
 
 const Session = () => {
   const navigate = useNavigate();
@@ -22,18 +22,15 @@ const Session = () => {
     currentTrack,
     isPlaying,
     setIsPlaying,
-    searchTracks,
   } = useMusicSession();
   
   const { messages, sendMessage } = useSessionChat(sessionId || '');
-  const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
 
   useEffect(() => {
-    // Check authentication status
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -70,16 +67,6 @@ const Session = () => {
   const handleAddToQueue = (track: Track) => {
     setQueue(prev => [...prev, track]);
     toast.success(`Added "${track.title}" to queue`);
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (messageInput.trim() && sessionId) {
-      const success = await sendMessage(messageInput.trim());
-      if (success) {
-        setMessageInput("");
-      }
-    }
   };
 
   const handleSearch = async (query: string) => {
@@ -159,51 +146,8 @@ const Session = () => {
           </Tabs>
         </div>
 
-        {/* Right Column - Chat */}
-        <div className="col-span-3 glass-morphism p-4 rounded-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Session Chat</h2>
-          </div>
-          <div className="h-[calc(100vh-300px)] flex flex-col">
-            <ScrollArea className="flex-1 pr-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className="mb-4"
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="rounded-full bg-primary w-8 h-8 flex items-center justify-center text-primary-foreground">
-                      {message.displayName?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">
-                          {message.displayName || 'Unknown User'}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <p className="text-sm mt-1">{message.message}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </ScrollArea>
-            <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
-              <Input
-                type="text"
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1"
-              />
-              <Button type="submit" size="icon">
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
+        <div className="col-span-3">
+          <ChatSection messages={messages} onSendMessage={sendMessage} />
         </div>
       </div>
 
