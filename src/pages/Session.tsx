@@ -25,12 +25,52 @@ const Session = () => {
   } = useMusicSession();
   
   const { messages, sendMessage } = useSessionChat(sessionId || '');
-
   const [messageInput, setMessageInput] = useState("");
   const [activeTab, setActiveTab] = useState("recommendations");
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { display_name: string }>>({});
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('session_messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'session_messages',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        async (payload) => {
+          const { user_id } = payload.new;
+          // Fetch user profile if not already cached
+          if (!profiles[user_id]) {
+            const { data } = await supabase
+              .from('profiles')
+              .select('display_name')
+              .eq('id', user_id)
+              .single();
+            
+            if (data) {
+              setProfiles(prev => ({
+                ...prev,
+                [user_id]: data
+              }));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -59,11 +99,23 @@ const Session = () => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (messageInput.trim()) {
-      sendMessage(messageInput);
-      setMessageInput("");
+    if (messageInput.trim() && sessionId) {
+      try {
+        const { error } = await supabase
+          .from('session_messages')
+          .insert({
+            session_id: sessionId,
+            message: messageInput.trim(),
+          });
+
+        if (error) throw error;
+        setMessageInput("");
+      } catch (error) {
+        console.error('Error sending message:', error);
+        toast.error('Failed to send message');
+      }
     }
   };
 
@@ -78,8 +130,7 @@ const Session = () => {
   };
 
   const handleSelectTrack = (track: Track) => {
-    console.log('Selected track:', track);
-    toast.success(`Added "${track.title}" to queue`);
+    handleAddToQueue(track);
   };
 
   if (!currentSession) {
@@ -162,11 +213,13 @@ const Session = () => {
                 >
                   <div className="flex items-start gap-2">
                     <div className="rounded-full bg-primary w-8 h-8 flex items-center justify-center text-primary-foreground">
-                      {message.userId.charAt(0).toUpperCase()}
+                      {profiles[message.userId]?.display_name?.charAt(0).toUpperCase() || message.userId.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">{message.userId}</span>
+                        <span className="font-semibold">
+                          {profiles[message.userId]?.display_name || 'Unknown User'}
+                        </span>
                         <span className="text-xs text-gray-400">
                           {new Date(message.timestamp).toLocaleTimeString()}
                         </span>
