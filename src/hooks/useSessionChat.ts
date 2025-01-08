@@ -17,7 +17,7 @@ export const useSessionChat = (sessionId: string) => {
           message,
           created_at,
           user_id,
-          profiles (
+          profiles:user_id (
             display_name
           )
         `)
@@ -36,7 +36,7 @@ export const useSessionChat = (sessionId: string) => {
           userId: msg.user_id,
           message: msg.message,
           timestamp: new Date(msg.created_at),
-          displayName: msg.profiles?.display_name || 'Unknown User'
+          displayName: msg.profiles?.display_name || 'Anonymous'
         }))
       );
     };
@@ -61,7 +61,7 @@ export const useSessionChat = (sessionId: string) => {
               message,
               created_at,
               user_id,
-              profiles (
+              profiles:user_id (
                 display_name
               )
             `)
@@ -79,7 +79,7 @@ export const useSessionChat = (sessionId: string) => {
             userId: data.user_id,
             message: data.message,
             timestamp: new Date(data.created_at),
-            displayName: data.profiles?.display_name || 'Unknown User'
+            displayName: data.profiles?.display_name || 'Anonymous'
           };
           
           setMessages((prev) => [...prev, newMessage]);
