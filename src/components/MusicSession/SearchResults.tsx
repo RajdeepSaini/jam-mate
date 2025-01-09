@@ -28,7 +28,7 @@ export const SearchResults = ({ tracks, onSelectTrack }: SearchResultsProps) => 
       // Download and process the track
       await uploadTrack({
         ...track,
-        youtubeId: youtubeTrack.id // Add YouTube ID for download
+        youtubeId: youtubeTrack.id
       }, new Blob()); // Placeholder blob, actual download happens in the Edge Function
       
       // Notify the parent component
