@@ -12,7 +12,7 @@ import { Track } from "@/types/session";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatSection } from "@/components/MusicSession/ChatSection";
-import { searchTracks } from "@/services/spotify";
+import { searchYouTube, downloadTrack } from "@/services/youtube";
 
 const Session = () => {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ const Session = () => {
 
         if (profile?.favorite_genres?.length) {
           const genre = profile.favorite_genres[Math.floor(Math.random() * profile.favorite_genres.length)];
-          const results = await searchTracks(genre);
+          const results = await searchYouTube(genre);
           setRecommendations(results);
         }
       } catch (error) {
@@ -73,7 +73,7 @@ const Session = () => {
 
   const handleSearch = async (query: string) => {
     try {
-      const results = await searchTracks(query);
+      const results = await searchYouTube(query);
       setSearchResults(results);
     } catch (error) {
       console.error('Error searching tracks:', error);
@@ -81,8 +81,14 @@ const Session = () => {
     }
   };
 
-  const handleSelectTrack = (track: Track) => {
-    handleAddToQueue(track);
+  const handleSelectTrack = async (track: Track) => {
+    try {
+      await downloadTrack(track);
+      handleAddToQueue(track);
+    } catch (error) {
+      console.error('Error processing track:', error);
+      toast.error('Failed to process track');
+    }
   };
 
   const handleSendMessage = async (message: string) => {
