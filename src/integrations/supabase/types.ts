@@ -269,6 +269,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stored_tracks: {
+        Row: {
+          artist: string
+          created_at: string | null
+          duration: number | null
+          file_path: string
+          id: string
+          last_accessed: string | null
+          title: string
+          track_id: string
+        }
+        Insert: {
+          artist: string
+          created_at?: string | null
+          duration?: number | null
+          file_path: string
+          id?: string
+          last_accessed?: string | null
+          title: string
+          track_id: string
+        }
+        Update: {
+          artist?: string
+          created_at?: string | null
+          duration?: number | null
+          file_path?: string
+          id?: string
+          last_accessed?: string | null
+          title?: string
+          track_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       session_participants_view: {

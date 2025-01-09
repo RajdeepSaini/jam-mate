@@ -1,1 +1,17 @@
 project_id = "mzvkinmycnwvyyziyuon"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[[functions]]
+name = "handle-audio-upload"
+verify_jwt = true
