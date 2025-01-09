@@ -2,8 +2,6 @@ import { Track } from "@/types/session";
 import { supabase } from "@/integrations/supabase/client";
 
 export const searchYouTube = async (query: string): Promise<Track[]> => {
-  // For now, we'll use a YouTube Data API proxy via Edge Function
-  // This keeps our API key secure
   const { data, error } = await supabase.functions.invoke('youtube-search', {
     body: { query }
   });
@@ -22,7 +20,7 @@ export const searchYouTube = async (query: string): Promise<Track[]> => {
 export const downloadTrack = async (track: Track): Promise<void> => {
   const { error } = await supabase.functions.invoke('download-youtube', {
     body: {
-      videoId: track.id,
+      videoId: track.youtubeId,
       title: track.title,
       artist: track.artist,
     }

@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Track } from "@/types/session";
 import { uploadTrack } from "@/services/audioStorage";
+import { searchYouTube } from "@/services/youtube";
 import { toast } from "sonner";
 
 interface SearchResultsProps {
@@ -11,16 +12,28 @@ interface SearchResultsProps {
 export const SearchResults = ({ tracks, onSelectTrack }: SearchResultsProps) => {
   const handleTrackSelect = async (track: Track) => {
     try {
-      // Here we would normally download the audio file from Spotify
-      // For now, we'll simulate it with a dummy MP3 file
-      const response = await fetch('/placeholder-audio.mp3');
-      const audioBlob = await response.blob();
+      toast.info(`Processing "${track.title}"...`);
       
-      // Upload the track to storage
-      await uploadTrack(track, audioBlob);
+      // Search YouTube for the track
+      const searchQuery = `${track.title} ${track.artist} official audio`;
+      const youtubeResults = await searchYouTube(searchQuery);
+      
+      if (!youtubeResults.length) {
+        throw new Error('No YouTube results found');
+      }
+
+      // Use the first result (most relevant)
+      const youtubeTrack = youtubeResults[0];
+      
+      // Download and process the track
+      await uploadTrack({
+        ...track,
+        youtubeId: youtubeTrack.id // Add YouTube ID for download
+      }, new Blob()); // Placeholder blob, actual download happens in the Edge Function
       
       // Notify the parent component
       onSelectTrack(track);
+      toast.success(`Added "${track.title}" to queue`);
     } catch (error) {
       console.error('Failed to process track:', error);
       toast.error('Failed to process track');

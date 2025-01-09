@@ -12,24 +12,26 @@ serve(async (req) => {
 
   try {
     const { query } = await req.json()
-    const YOUTUBE_API_KEY = Deno.env.get('YOUTUBE_API_KEY')
-
-    if (!YOUTUBE_API_KEY) {
-      throw new Error('YouTube API key not configured')
-    }
-
+    
+    // Use YouTube Data API to search for videos
+    const searchQuery = encodeURIComponent(query)
     const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`,
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=video&maxResults=5&key=${Deno.env.get('YOUTUBE_API_KEY')}`,
       { method: 'GET' }
     )
 
-    const data = await response.json()
+    if (!response.ok) {
+      throw new Error('YouTube API request failed')
+    }
 
+    const data = await response.json()
+    
     return new Response(
       JSON.stringify(data),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
