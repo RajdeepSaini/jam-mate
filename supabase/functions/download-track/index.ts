@@ -9,8 +9,11 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('Function invoked:', req.method);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { 
       headers: corsHeaders,
       status: 204
@@ -31,6 +34,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase configuration');
       throw new Error('Missing Supabase configuration');
     }
 
@@ -53,7 +57,12 @@ serve(async (req) => {
       console.log('Track already exists, returning existing file path');
       return new Response(
         JSON.stringify({ filePath: existingTrack.file_path }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
     }
 
@@ -108,14 +117,22 @@ serve(async (req) => {
     console.log('Successfully processed track:', trackTitle);
     return new Response(
       JSON.stringify({ filePath }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
     );
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
         status: 500
       }
     );
