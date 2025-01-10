@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import { download } from "https://deno.land/x/ytdl_core@v1.0.0/mod.ts";
 import { search } from "https://deno.land/x/youtube_search@v1.0.0/mod.ts";
+import { download } from "https://deno.land/x/youtube_dl@v0.2.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,16 +84,19 @@ serve(async (req) => {
     const videoUrl = `https://www.youtube.com/watch?v=${searchResults[0].id}`;
     console.log('Found YouTube video:', videoUrl);
 
-    // Download the audio using yt-dlp
+    // Download the audio using youtube_dl
     console.log('Downloading audio from YouTube...');
-    const audioBuffer = await download(videoUrl, {
+    const audioData = await download(videoUrl, {
       format: 'mp3',
-      quality: 'highest',
+      output: 'audio',
     });
 
-    if (!audioBuffer || audioBuffer.length === 0) {
+    if (!audioData || !audioData.data) {
       throw new Error('Failed to download audio');
     }
+
+    // Convert the audio data to Uint8Array
+    const audioBuffer = new Uint8Array(audioData.data);
 
     // Generate a unique filename
     const fileName = `${crypto.randomUUID()}.mp3`;
