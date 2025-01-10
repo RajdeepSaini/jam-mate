@@ -55,6 +55,10 @@ export const MusicPlayer = ({
         toast.info("Downloading track...");
         const filePath = await downloadTrack(track);
         storedTrack = await getStoredTrack(track.id);
+        
+        if (!storedTrack) {
+          throw new Error("Failed to store track after download");
+        }
       }
 
       // Get the public URL for the track
