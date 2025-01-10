@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import { download } from "https://deno.land/x/youtube_dl@v0.2.2/mod.ts";
+import { download } from "https://deno.land/x/yt_download@v1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,24 +66,20 @@ serve(async (req) => {
       );
     }
 
-    // Construct search query and video URL directly
-    const searchQuery = `${trackTitle} ${trackArtist} official audio`;
-    const videoUrl = `https://www.youtube.com/watch?v=dQw4w9WgXcQ`; // This is a placeholder. In production, you should implement proper YouTube search
+    // For now, use a placeholder video for testing
+    const videoUrl = `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
     console.log('Using video URL:', videoUrl);
 
-    // Download the audio using youtube_dl
+    // Download the audio using yt_download
     console.log('Downloading audio from YouTube...');
     const audioData = await download(videoUrl, {
       format: 'mp3',
-      output: 'audio',
+      quality: 'highest',
     });
 
-    if (!audioData || !audioData.data) {
+    if (!audioData) {
       throw new Error('Failed to download audio');
     }
-
-    // Convert the audio data to Uint8Array
-    const audioBuffer = new Uint8Array(audioData.data);
 
     // Generate a unique filename
     const fileName = `${crypto.randomUUID()}.mp3`;
@@ -94,7 +90,7 @@ serve(async (req) => {
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
-      .upload(filePath, audioBuffer, {
+      .upload(filePath, audioData, {
         contentType: 'audio/mpeg',
         upsert: false
       });
