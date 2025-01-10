@@ -15,6 +15,7 @@ interface MusicPlayerProps {
   onNext: () => void;
   onPrevious: () => void;
   queue?: Track[];
+  onPlayQueueTrack?: (track: Track) => void;
 }
 
 export const MusicPlayer = ({
@@ -24,6 +25,7 @@ export const MusicPlayer = ({
   onNext,
   onPrevious,
   queue = [],
+  onPlayQueueTrack,
 }: MusicPlayerProps) => {
   const [volume, setVolume] = useState([100]);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
@@ -178,9 +180,20 @@ export const MusicPlayer = ({
               </SheetHeader>
               <ScrollArea className="h-[calc(100vh-100px)] mt-4">
                 <div className="space-y-4">
-                  {queue.map((track, index) => (
-                    <div key={track.id} className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg">
-                      <img src={track.albumArt} alt={track.title} className="h-12 w-12 rounded" />
+                  {queue.map((track) => (
+                    <div 
+                      key={track.id} 
+                      className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg group"
+                    >
+                      <div className="relative">
+                        <img src={track.albumArt} alt={track.title} className="h-12 w-12 rounded" />
+                        <div 
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center cursor-pointer"
+                          onClick={() => onPlayQueueTrack?.(track)}
+                        >
+                          <Play className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
                       <div>
                         <h4 className="font-medium">{track.title}</h4>
                         <p className="text-sm text-gray-500">{track.artist}</p>
