@@ -94,23 +94,25 @@ export const MusicPlayer = ({
   return (
     <div className="fixed bottom-0 left-0 right-0 glass-morphism p-4 animate-slide-up">
       <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {currentTrack && (
+        <div className="flex items-center gap-4 min-w-[240px]">
+          {currentTrack ? (
             <>
               <img
                 src={currentTrack.albumArt}
                 alt={currentTrack.title}
-                className="h-14 w-14 rounded-md"
+                className="h-14 w-14 rounded-md shadow-lg"
               />
               <div>
-                <h3 className="font-semibold">{currentTrack.title}</h3>
-                <p className="text-sm text-gray-400">{currentTrack.artist}</p>
+                <h3 className="font-semibold text-sm md:text-base line-clamp-1">{currentTrack.title}</h3>
+                <p className="text-xs md:text-sm text-gray-400 line-clamp-1">{currentTrack.artist}</p>
               </div>
             </>
+          ) : (
+            <div className="text-gray-400 text-sm">No track playing</div>
           )}
         </div>
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-2 flex-1 max-w-[600px]">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -148,11 +150,11 @@ export const MusicPlayer = ({
             defaultValue={[0]}
             max={100}
             step={1}
-            className="w-[400px]"
+            className="w-full"
           />
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-[200px] justify-end">
           <div className="flex items-center gap-2">
             <Volume2 className="h-5 w-5 text-gray-400" />
             <Slider
