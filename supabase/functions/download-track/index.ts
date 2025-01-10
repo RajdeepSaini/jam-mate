@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import { download } from "https://deno.land/x/ytdl_core/mod.ts";
+import { download } from "https://deno.land/x/ytdl_core@v1.0.0/mod.ts";
+import { search } from "https://deno.land/x/youtube_search@v1.0.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,10 +33,11 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase configuration');
-      throw new Error('Missing Supabase configuration');
+    if (!supabaseUrl || !supabaseKey || !youtubeApiKey) {
+      console.error('Missing required configuration');
+      throw new Error('Missing required configuration');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -70,8 +72,17 @@ serve(async (req) => {
     const searchQuery = `${trackTitle} ${trackArtist} official audio`;
     console.log('Searching YouTube for:', searchQuery);
     
-    // For now, using a placeholder URL. In production, you'd search YouTube first
-    const videoUrl = `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
+    const searchResults = await search(searchQuery, {
+      maxResults: 1,
+      key: youtubeApiKey
+    });
+
+    if (!searchResults || searchResults.length === 0) {
+      throw new Error('No YouTube results found for track');
+    }
+
+    const videoUrl = `https://www.youtube.com/watch?v=${searchResults[0].id}`;
+    console.log('Found YouTube video:', videoUrl);
 
     // Download the audio using yt-dlp
     console.log('Downloading audio from YouTube...');
@@ -79,6 +90,10 @@ serve(async (req) => {
       format: 'mp3',
       quality: 'highest',
     });
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      throw new Error('Failed to download audio');
+    }
 
     // Generate a unique filename
     const fileName = `${crypto.randomUUID()}.mp3`;
