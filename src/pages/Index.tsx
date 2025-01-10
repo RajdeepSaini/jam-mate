@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/Layout/UserMenu";
 import { SessionList } from "@/components/MusicSession/SessionList";
-import { Session, Track } from "@/types/session";
+import { Session } from "@/types/session";
 import { parseTrackData } from "@/utils/typeGuards";
 
 const Index = () => {
@@ -22,25 +22,36 @@ const Index = () => {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      try {
+        const { data: { session }, error: authError } = await supabase.auth.getSession();
+        if (authError) throw authError;
+        
+        if (!session) {
+          navigate("/login");
+          return;
+        }
+        
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) throw profileError;
+        
+        if (profile) {
+          setUsername(profile.username || '');
+          setAvatarUrl(profile.avatar_url || '');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        toast.error('Authentication error. Please try logging in again.');
         navigate("/login");
-        return;
-      }
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (profile) {
-        setUsername(profile.username || '');
-        setAvatarUrl(profile.avatar_url || '');
       }
     };
 
@@ -50,6 +61,7 @@ const Index = () => {
 
   const fetchSessions = async () => {
     try {
+      setIsLoading(true);
       const { data: sessionsData, error } = await supabase
         .from('sessions')
         .select(`
@@ -76,7 +88,9 @@ const Index = () => {
       setSessions(formattedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
-      toast.error('Failed to load sessions');
+      toast.error('Failed to load sessions. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -191,7 +205,11 @@ const Index = () => {
 
           <div className="mt-8">
             <h2 className="text-2xl font-semibold mb-6">Available Sessions</h2>
-            <SessionList sessions={sessions} onJoinSession={joinSession} />
+            {isLoading ? (
+              <div className="text-center text-gray-500">Loading sessions...</div>
+            ) : (
+              <SessionList sessions={sessions} onJoinSession={joinSession} />
+            )}
           </div>
         </div>
       </div>
