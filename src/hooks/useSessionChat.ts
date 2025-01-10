@@ -17,7 +17,7 @@ export const useSessionChat = (sessionId: string) => {
           message,
           created_at,
           user_id,
-          profiles!session_messages_user_id_fkey (
+          profiles:user_id (
             display_name
           )
         `)
@@ -61,7 +61,7 @@ export const useSessionChat = (sessionId: string) => {
               message,
               created_at,
               user_id,
-              profiles!session_messages_user_id_fkey (
+              profiles:user_id (
                 display_name
               )
             `)
