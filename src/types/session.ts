@@ -5,7 +5,6 @@ export interface Track {
   albumArt: string;
   duration?: number;
   uri?: string;
-  youtubeId?: string;
 }
 
 export interface Session {

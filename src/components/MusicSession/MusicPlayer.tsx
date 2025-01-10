@@ -1,19 +1,16 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipForward, SkipBack, Volume2, ListMusic } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Track } from "@/types/session";
-import { getStoredTrack, getTrackUrl } from "@/services/audioStorage";
-import { toast } from "sonner";
 
 interface MusicPlayerProps {
   currentTrack?: {
     title: string;
     artist: string;
     albumArt: string;
-    id: string;
   };
   isPlaying: boolean;
   onPlayPause: () => void;
@@ -31,69 +28,9 @@ export const MusicPlayer = ({
   queue = [],
 }: MusicPlayerProps) => {
   const [volume, setVolume] = useState([100]);
-  const [progress, setProgress] = useState([0]);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (currentTrack?.id) {
-      loadTrack(currentTrack.id);
-    }
-  }, [currentTrack]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume[0] / 100;
-    }
-  }, [volume]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(error => {
-          console.error('Playback failed:', error);
-          toast.error('Failed to play track');
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying]);
-
-  const loadTrack = async (trackId: string) => {
-    try {
-      const storedTrack = await getStoredTrack(trackId);
-      const url = getTrackUrl(storedTrack.file_path);
-      setAudioUrl(url);
-    } catch (error) {
-      console.error('Failed to load track:', error);
-      toast.error('Failed to load track');
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      const percentage = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-      setProgress([percentage]);
-    }
-  };
-
-  const handleSeek = (value: number[]) => {
-    if (audioRef.current && audioRef.current.duration) {
-      const time = (value[0] / 100) * audioRef.current.duration;
-      audioRef.current.currentTime = time;
-      setProgress(value);
-    }
-  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 glass-morphism p-4 animate-slide-up">
-      <audio
-        ref={audioRef}
-        src={audioUrl || undefined}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={onNext}
-      />
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-4">
           {currentTrack && (
@@ -143,8 +80,7 @@ export const MusicPlayer = ({
             </Button>
           </div>
           <Slider
-            value={progress}
-            onValueChange={handleSeek}
+            defaultValue={[0]}
             max={100}
             step={1}
             className="w-[400px]"
