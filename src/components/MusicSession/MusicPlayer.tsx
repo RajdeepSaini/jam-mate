@@ -1,17 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipForward, SkipBack, Volume2, ListMusic } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Track } from "@/types/session";
+import { downloadTrack, getStoredTrack, getTrackUrl } from "@/services/tracks";
+import { toast } from "sonner";
 
 interface MusicPlayerProps {
-  currentTrack?: {
-    title: string;
-    artist: string;
-    albumArt: string;
-  };
+  currentTrack?: Track;
   isPlaying: boolean;
   onPlayPause: () => void;
   onNext: () => void;
@@ -28,6 +26,70 @@ export const MusicPlayer = ({
   queue = [],
 }: MusicPlayerProps) => {
   const [volume, setVolume] = useState([100]);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentTrack) {
+      loadTrack(currentTrack);
+    }
+  }, [currentTrack]);
+
+  useEffect(() => {
+    if (audio) {
+      audio.volume = volume[0] / 100;
+    }
+  }, [volume, audio]);
+
+  const loadTrack = async (track: Track) => {
+    try {
+      setIsLoading(true);
+      
+      // Check if track is already stored
+      let storedTrack = await getStoredTrack(track.id);
+      
+      if (!storedTrack) {
+        // Download the track if it's not stored
+        toast.info("Downloading track...");
+        const filePath = await downloadTrack(track);
+        storedTrack = await getStoredTrack(track.id);
+      }
+
+      // Get the public URL for the track
+      const publicUrl = await getTrackUrl(storedTrack.file_path);
+      
+      // Create and configure audio element
+      const newAudio = new Audio(publicUrl);
+      newAudio.volume = volume[0] / 100;
+      
+      // Clean up old audio element
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+      
+      setAudio(newAudio);
+      
+      if (isPlaying) {
+        newAudio.play();
+      }
+    } catch (error) {
+      console.error('Error loading track:', error);
+      toast.error("Failed to load track");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (audio) {
+      if (isPlaying) {
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    }
+  }, [isPlaying, audio]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 glass-morphism p-4 animate-slide-up">
@@ -55,6 +117,7 @@ export const MusicPlayer = ({
               size="icon"
               onClick={onPrevious}
               className="text-gray-400 hover:text-white"
+              disabled={isLoading}
             >
               <SkipBack className="h-5 w-5" />
             </Button>
@@ -63,6 +126,7 @@ export const MusicPlayer = ({
               size="icon"
               onClick={onPlayPause}
               className="h-10 w-10 rounded-full bg-music-primary hover:bg-music-accent text-white"
+              disabled={isLoading}
             >
               {isPlaying ? (
                 <Pause className="h-5 w-5" />
@@ -75,6 +139,7 @@ export const MusicPlayer = ({
               size="icon"
               onClick={onNext}
               className="text-gray-400 hover:text-white"
+              disabled={isLoading}
             >
               <SkipForward className="h-5 w-5" />
             </Button>
