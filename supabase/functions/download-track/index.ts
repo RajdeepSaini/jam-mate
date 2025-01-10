@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -24,11 +24,16 @@ serve(async (req) => {
     )
 
     // Check if track already exists
-    const { data: existingTrack } = await supabase
+    const { data: existingTrack, error: existingTrackError } = await supabase
       .from('stored_tracks')
       .select('*')
       .eq('track_id', trackId)
-      .single()
+      .maybeSingle()
+
+    if (existingTrackError) {
+      console.error('Error checking existing track:', existingTrackError)
+      throw existingTrackError
+    }
 
     if (existingTrack) {
       console.log('Track already exists, returning existing file path')
@@ -40,9 +45,13 @@ serve(async (req) => {
 
     // Search YouTube for the track
     const searchQuery = `${trackTitle} ${trackArtist} official audio`
-    const videoUrl = `https://www.youtube.com/watch?v=dQw4w9WgXcQ` // This is a placeholder. In production, you'd search YouTube first
+    console.log('Searching YouTube for:', searchQuery)
+    
+    // For now, using a placeholder URL. In production, you'd search YouTube first
+    const videoUrl = `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 
     // Download the audio using yt-dlp
+    console.log('Downloading audio from YouTube...')
     const audioBuffer = await download(videoUrl, {
       format: 'mp3',
       quality: 'highest',
@@ -51,6 +60,8 @@ serve(async (req) => {
     // Generate a unique filename
     const fileName = `${crypto.randomUUID()}.mp3`
     const filePath = `tracks/${fileName}`
+
+    console.log('Uploading to Supabase Storage:', filePath)
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -61,6 +72,7 @@ serve(async (req) => {
       })
 
     if (uploadError) {
+      console.error('Error uploading to storage:', uploadError)
       throw uploadError
     }
 
@@ -75,15 +87,17 @@ serve(async (req) => {
       })
 
     if (dbError) {
+      console.error('Error storing track info:', dbError)
       throw dbError
     }
 
+    console.log('Successfully processed track:', trackTitle)
     return new Response(
       JSON.stringify({ filePath }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error processing request:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
