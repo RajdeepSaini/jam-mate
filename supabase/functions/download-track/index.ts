@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import ytdl from 'https://esm.sh/ytdl-core@4.11.5'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,45 +43,43 @@ serve(async (req) => {
       )
     }
 
-    // Create a mock MP3 file with proper headers and data
-    console.log('Creating mock audio file with proper MP3 structure')
+    // Search for the track on YouTube
+    const searchQuery = `${trackTitle} ${trackArtist} official audio`
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&key=${Deno.env.get('YOUTUBE_API_KEY')}&type=video&maxResults=1`
     
-    // Create a 5MB mock MP3 file
-    const fileSize = 5 * 1024 * 1024 // 5MB
-    const mockAudioData = new Uint8Array(fileSize)
+    console.log('Searching YouTube for:', searchQuery)
     
-    // Write MP3 header (ID3v2 tag)
-    const header = new TextEncoder().encode('ID3')
-    mockAudioData.set(header, 0) // 'ID3' magic number
-    mockAudioData[3] = 0x03 // version
-    mockAudioData[4] = 0x00 // revision
-    mockAudioData[5] = 0x00 // flags
+    const searchResponse = await fetch(searchUrl)
+    const searchData = await searchResponse.json()
     
-    // Set size (synchsafe integer)
-    const size = fileSize - 10 // total size minus header
-    mockAudioData[6] = (size >> 21) & 0x7F
-    mockAudioData[7] = (size >> 14) & 0x7F
-    mockAudioData[8] = (size >> 7) & 0x7F
-    mockAudioData[9] = size & 0x7F
-
-    // Add frame header (simple sine wave pattern)
-    for (let i = 10; i < fileSize; i += 2) {
-      const value = Math.sin((i - 10) / 100) * 127 + 128
-      mockAudioData[i] = Math.floor(value)
-      mockAudioData[i + 1] = Math.floor(value * 0.8)
+    if (!searchData.items?.[0]?.id?.videoId) {
+      throw new Error('No YouTube results found')
     }
 
-    console.log(`Created mock audio data of size: ${mockAudioData.length} bytes`)
+    const videoId = searchData.items[0].id.videoId
+    console.log('Found YouTube video:', videoId)
 
-    // Generate a unique filename for the track
-    const filePath = `tracks/${trackId}.mp3`
+    // Get audio stream
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
+    const info = await ytdl.getInfo(videoUrl)
+    const audioFormat = ytdl.chooseFormat(info.formats, { quality: 'highestaudio' })
     
-    console.log('Uploading file to storage:', filePath)
+    if (!audioFormat?.url) {
+      throw new Error('No audio stream found')
+    }
 
-    // Upload to storage
+    // Download the audio
+    console.log('Downloading audio stream')
+    const audioResponse = await fetch(audioFormat.url)
+    const audioBuffer = await audioResponse.arrayBuffer()
+    
+    // Generate file path and upload to storage
+    const filePath = `tracks/${trackId}.mp3`
+    console.log('Uploading to storage:', filePath)
+
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
-      .upload(filePath, mockAudioData, {
+      .upload(filePath, audioBuffer, {
         contentType: 'audio/mpeg',
         upsert: false
       })
@@ -90,8 +89,6 @@ serve(async (req) => {
       throw uploadError
     }
 
-    console.log('File uploaded successfully, saving to database')
-
     // Save track information to database
     const { error: dbError } = await supabase
       .from('stored_tracks')
@@ -100,7 +97,7 @@ serve(async (req) => {
         file_path: filePath,
         title: trackTitle,
         artist: trackArtist,
-        duration: 180, // Mock duration of 3 minutes
+        duration: Math.floor(info.videoDetails.lengthSeconds),
       })
 
     if (dbError) {
