@@ -4,7 +4,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
@@ -67,10 +66,26 @@ serve(async (req) => {
 
     // For testing purposes, we'll create a mock audio file
     console.log('Creating mock audio file for testing');
-    const mockAudioData = new Uint8Array([
-      // Mock MP3 header and minimal audio data
-      0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    ]);
+    
+    // Create a mock MP3 file with 1MB of data
+    const mockAudioData = new Uint8Array(1024 * 1024); // 1MB of data
+    
+    // Add MP3 header (ID3v2 tag)
+    mockAudioData[0] = 0x49; // 'I'
+    mockAudioData[1] = 0x44; // 'D'
+    mockAudioData[2] = 0x33; // '3'
+    mockAudioData[3] = 0x03; // version
+    mockAudioData[4] = 0x00; // revision
+    mockAudioData[5] = 0x00; // flags
+    mockAudioData[6] = 0x00; // size
+    mockAudioData[7] = 0x00;
+    mockAudioData[8] = 0x00;
+    mockAudioData[9] = 0x00;
+
+    // Fill the rest with pseudo-random data to simulate audio
+    for (let i = 10; i < mockAudioData.length; i++) {
+      mockAudioData[i] = Math.floor(Math.random() * 256);
+    }
 
     // Generate a unique filename
     const fileName = `${crypto.randomUUID()}.mp3`;
