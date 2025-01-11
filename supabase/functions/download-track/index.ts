@@ -7,141 +7,122 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('Function invoked:', req.method);
-
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 204
-    });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Parse request body
-    const { trackTitle, trackArtist, trackId } = await req.json();
-    console.log(`Processing track request: ${trackTitle} by ${trackArtist}`);
+    const { trackId, trackTitle, trackArtist } = await req.json()
 
-    if (!trackTitle || !trackArtist || !trackId) {
-      throw new Error('Missing required track information');
+    if (!trackId || !trackTitle || !trackArtist) {
+      throw new Error('Missing required track information')
     }
+
+    console.log(`Processing track: ${trackTitle} by ${trackArtist} (ID: ${trackId})`)
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing required configuration');
-      throw new Error('Missing required configuration');
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Check if track already exists
-    console.log('Checking if track exists:', trackId);
-    const { data: existingTrack, error: existingTrackError } = await supabase
+    // Check if track already exists in storage
+    const { data: existingTrack } = await supabase
       .from('stored_tracks')
       .select('*')
       .eq('track_id', trackId)
-      .maybeSingle();
-
-    if (existingTrackError) {
-      console.error('Error checking existing track:', existingTrackError);
-      throw existingTrackError;
-    }
+      .single()
 
     if (existingTrack) {
-      console.log('Track already exists, returning existing file path');
+      console.log('Track already exists in storage:', existingTrack)
       return new Response(
         JSON.stringify({ filePath: existingTrack.file_path }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
-        }
-      );
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // For testing purposes, we'll create a mock audio file
-    console.log('Creating mock audio file for testing');
+    // Create a mock MP3 file with proper headers and data
+    console.log('Creating mock audio file with proper MP3 structure')
     
-    // Create a mock MP3 file with 1MB of data
-    const mockAudioData = new Uint8Array(1024 * 1024); // 1MB of data
+    // Create a 2MB mock MP3 file
+    const fileSize = 2 * 1024 * 1024 // 2MB
+    const mockAudioData = new Uint8Array(fileSize)
     
-    // Add MP3 header (ID3v2 tag)
-    mockAudioData[0] = 0x49; // 'I'
-    mockAudioData[1] = 0x44; // 'D'
-    mockAudioData[2] = 0x33; // '3'
-    mockAudioData[3] = 0x03; // version
-    mockAudioData[4] = 0x00; // revision
-    mockAudioData[5] = 0x00; // flags
-    mockAudioData[6] = 0x00; // size
-    mockAudioData[7] = 0x00;
-    mockAudioData[8] = 0x00;
-    mockAudioData[9] = 0x00;
+    // Write MP3 header (ID3v2 tag)
+    const header = new TextEncoder().encode('ID3')
+    mockAudioData.set(header, 0) // 'ID3' magic number
+    mockAudioData[3] = 0x03 // version
+    mockAudioData[4] = 0x00 // revision
+    mockAudioData[5] = 0x00 // flags
+    
+    // Set size (synchsafe integer)
+    const size = fileSize - 10 // total size minus header
+    mockAudioData[6] = (size >> 21) & 0x7F
+    mockAudioData[7] = (size >> 14) & 0x7F
+    mockAudioData[8] = (size >> 7) & 0x7F
+    mockAudioData[9] = size & 0x7F
 
-    // Fill the rest with pseudo-random data to simulate audio
-    for (let i = 10; i < mockAudioData.length; i++) {
-      mockAudioData[i] = Math.floor(Math.random() * 256);
+    // Add frame header (simple sine wave pattern)
+    for (let i = 10; i < fileSize; i += 2) {
+      const value = Math.sin((i - 10) / 100) * 127 + 128
+      mockAudioData[i] = Math.floor(value)
+      mockAudioData[i + 1] = Math.floor(value * 0.8)
     }
+
+    console.log(`Created mock audio data of size: ${mockAudioData.length} bytes`)
 
     // Generate a unique filename
-    const fileName = `${crypto.randomUUID()}.mp3`;
-    const filePath = `tracks/${fileName}`;
+    const fileName = `${crypto.randomUUID()}.mp3`
+    const filePath = `tracks/${fileName}`
+    
+    console.log('Uploading file to storage:', filePath)
 
-    console.log('Uploading to Supabase Storage:', filePath);
-
-    // Upload to Supabase Storage
+    // Upload to storage
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
       .upload(filePath, mockAudioData, {
         contentType: 'audio/mpeg',
         upsert: false
-      });
+      })
 
     if (uploadError) {
-      console.error('Error uploading to storage:', uploadError);
-      throw uploadError;
+      console.error('Error uploading file:', uploadError)
+      throw uploadError
     }
 
-    // Store track information in the database
+    console.log('File uploaded successfully, saving to database')
+
+    // Save track information to database
     const { error: dbError } = await supabase
       .from('stored_tracks')
       .insert({
         track_id: trackId,
         file_path: filePath,
         title: trackTitle,
-        artist: trackArtist
-      });
+        artist: trackArtist,
+        duration: 180, // Mock duration of 3 minutes
+      })
 
     if (dbError) {
-      console.error('Error storing track info:', dbError);
-      throw dbError;
+      console.error('Error saving to database:', dbError)
+      throw dbError
     }
 
-    console.log('Successfully processed track:', trackTitle);
+    console.log('Track saved successfully')
+
     return new Response(
       JSON.stringify({ filePath }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
-    );
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error('Error processing request:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
       }
-    );
+    )
   }
-});
+})
