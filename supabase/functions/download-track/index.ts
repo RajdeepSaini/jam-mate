@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import { download } from "https://deno.land/x/yt_download@v1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,20 +65,12 @@ serve(async (req) => {
       );
     }
 
-    // For now, use a placeholder video for testing
-    const videoUrl = `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
-    console.log('Using video URL:', videoUrl);
-
-    // Download the audio using yt_download
-    console.log('Downloading audio from YouTube...');
-    const audioData = await download(videoUrl, {
-      format: 'mp3',
-      quality: 'highest',
-    });
-
-    if (!audioData) {
-      throw new Error('Failed to download audio');
-    }
+    // For testing purposes, we'll create a mock audio file
+    console.log('Creating mock audio file for testing');
+    const mockAudioData = new Uint8Array([
+      // Mock MP3 header and minimal audio data
+      0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    ]);
 
     // Generate a unique filename
     const fileName = `${crypto.randomUUID()}.mp3`;
@@ -90,7 +81,7 @@ serve(async (req) => {
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
-      .upload(filePath, audioData, {
+      .upload(filePath, mockAudioData, {
         contentType: 'audio/mpeg',
         upsert: false
       });
