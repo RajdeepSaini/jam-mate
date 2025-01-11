@@ -45,8 +45,8 @@ serve(async (req) => {
     // Create a mock MP3 file with proper headers and data
     console.log('Creating mock audio file with proper MP3 structure')
     
-    // Create a 2MB mock MP3 file
-    const fileSize = 2 * 1024 * 1024 // 2MB
+    // Create a 5MB mock MP3 file
+    const fileSize = 5 * 1024 * 1024 // 5MB
     const mockAudioData = new Uint8Array(fileSize)
     
     // Write MP3 header (ID3v2 tag)
@@ -72,9 +72,8 @@ serve(async (req) => {
 
     console.log(`Created mock audio data of size: ${mockAudioData.length} bytes`)
 
-    // Generate a unique filename
-    const fileName = `${crypto.randomUUID()}.mp3`
-    const filePath = `tracks/${fileName}`
+    // Generate a unique filename for the track
+    const filePath = `tracks/${trackId}.mp3`
     
     console.log('Uploading file to storage:', filePath)
 
@@ -119,10 +118,7 @@ serve(async (req) => {
     console.error('Error processing request:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
 })
