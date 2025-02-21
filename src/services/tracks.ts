@@ -24,10 +24,10 @@ export const getStoredTrack = async (trackId: string) => {
     .from('stored_tracks')
     .select('*')
     .eq('track_id', trackId)
-    .maybeSingle();
+    .single();
 
   if (error) throw error;
-  return data; // This will be null if no track is found
+  return data;
 };
 
 export const getTrackUrl = async (filePath: string) => {

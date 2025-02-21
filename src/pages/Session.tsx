@@ -5,7 +5,7 @@ import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
 import { useSessionChat } from "@/hooks/useSessionChat";
-import { Music, Play } from "lucide-react";
+import { Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchResults } from "@/components/MusicSession/SearchResults";
 import { Track } from "@/types/session";
@@ -29,7 +29,6 @@ const Session = () => {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
-  const [currentPlayingTrack, setCurrentPlayingTrack] = useState<Track | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -72,14 +71,6 @@ const Session = () => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
-  const handlePlayTrack = (track: Track) => {
-    setCurrentPlayingTrack(track);
-    setIsPlaying(true);
-    if (!queue.some(t => t.id === track.id)) {
-      handleAddToQueue(track);
-    }
-  };
-
   const handleSearch = async (query: string) => {
     try {
       const results = await searchTracks(query);
@@ -114,11 +105,7 @@ const Session = () => {
             <h2 className="text-xl font-semibold">Search Songs</h2>
           </div>
           <SearchBar onSearch={handleSearch} placeholder="Search for songs..." />
-          <SearchResults 
-            tracks={searchResults} 
-            onSelectTrack={handleSelectTrack}
-            onPlayTrack={handlePlayTrack}
-          />
+          <SearchResults tracks={searchResults} onSelectTrack={handleSelectTrack} />
         </div>
 
         <div className="col-span-6 glass-morphism p-4 rounded-lg">
@@ -139,18 +126,10 @@ const Session = () => {
                 {recommendations.map((track) => (
                   <div
                     key={track.id}
-                    className="flex items-center justify-between p-4 rounded-lg hover:bg-accent group"
+                    className="flex items-center justify-between p-4 rounded-lg hover:bg-accent"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <img src={track.albumArt} alt={track.title} className="w-12 h-12 rounded" />
-                        <div 
-                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center cursor-pointer"
-                          onClick={() => handlePlayTrack(track)}
-                        >
-                          <Play className="w-6 h-6 text-white" />
-                        </div>
-                      </div>
+                      <img src={track.albumArt} alt={track.title} className="w-12 h-12 rounded" />
                       <div>
                         <h3 className="font-medium">{track.title}</h3>
                         <p className="text-sm text-gray-500">{track.artist}</p>
@@ -182,23 +161,12 @@ const Session = () => {
       </div>
 
       <MusicPlayer
-        currentTrack={currentPlayingTrack}
+        currentTrack={currentTrack}
         isPlaying={isPlaying}
         onPlayPause={() => setIsPlaying(!isPlaying)}
-        onNext={() => {
-          const currentIndex = queue.findIndex(t => t.id === currentPlayingTrack?.id);
-          if (currentIndex < queue.length - 1) {
-            handlePlayTrack(queue[currentIndex + 1]);
-          }
-        }}
-        onPrevious={() => {
-          const currentIndex = queue.findIndex(t => t.id === currentPlayingTrack?.id);
-          if (currentIndex > 0) {
-            handlePlayTrack(queue[currentIndex - 1]);
-          }
-        }}
+        onNext={() => console.log("Next track")}
+        onPrevious={() => console.log("Previous track")}
         queue={queue}
-        onPlayQueueTrack={handlePlayTrack}
       />
     </div>
   );

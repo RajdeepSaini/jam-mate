@@ -5,10 +5,9 @@ import { Play } from "lucide-react";
 interface SearchResultsProps {
   tracks: Track[];
   onSelectTrack: (track: Track) => void;
-  onPlayTrack: (track: Track) => void;
 }
 
-export const SearchResults = ({ tracks, onSelectTrack, onPlayTrack }: SearchResultsProps) => {
+export const SearchResults = ({ tracks, onSelectTrack }: SearchResultsProps) => {
   if (!tracks?.length) return null;
 
   return (
@@ -22,13 +21,7 @@ export const SearchResults = ({ tracks, onSelectTrack, onPlayTrack }: SearchResu
           <CardContent className="flex items-center gap-4 p-4">
             <div className="relative">
               <img src={track.albumArt} alt={track.title} className="w-12 h-12 rounded" />
-              <div 
-                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPlayTrack(track);
-                }}
-              >
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
                 <Play className="w-6 h-6 text-white" />
               </div>
             </div>
