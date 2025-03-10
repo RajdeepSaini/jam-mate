@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import { YouTube } from "https://deno.land/x/youtube@v0.3.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,78 +42,88 @@ serve(async (req) => {
       )
     }
 
-    // Create YouTube client
-    const youtube = new YouTube(Deno.env.get('YOUTUBE_API_KEY') || '');
-
-    // Search YouTube for the track
-    console.log(`Searching YouTube for: ${trackTitle} ${trackArtist}`);
-    const searchResults = await youtube.search(`${trackTitle} ${trackArtist} official audio`);
+    // Prepare the search query
+    const searchQuery = `${trackTitle} ${trackArtist} audio`;
+    console.log(`Searching for: ${searchQuery}`);
     
-    if (!searchResults.length) {
-      throw new Error('No YouTube results found for this track');
+    // Create a temporary file for yt-dlp JSON output
+    const tempJsonFile = await Deno.makeTempFile({ suffix: '.json' });
+    
+    // Use yt-dlp to search and get the best audio format
+    // The --dump-json flag outputs metadata about the video
+    const ytDlpCommand = new Deno.Command("yt-dlp", {
+      args: [
+        "ytsearch1:" + searchQuery,
+        "--dump-json",
+        "--no-playlist",
+        "-o", tempJsonFile
+      ]
+    });
+    
+    const ytDlpResult = await ytDlpCommand.output();
+    if (!ytDlpResult.success) {
+      throw new Error(`yt-dlp search failed with status: ${ytDlpResult.code}`);
     }
     
-    // Get the first result
-    const videoId = searchResults[0].id;
+    // Read the JSON output
+    const jsonOutput = await Deno.readTextFile(tempJsonFile);
+    const videoInfo = JSON.parse(jsonOutput);
+    const videoId = videoInfo.id;
+    
+    if (!videoId) {
+      throw new Error('No video found for this track');
+    }
+    
     console.log(`Found video with ID: ${videoId}`);
     
-    const videoInfo = await youtube.getVideo(videoId);
+    // Create a temporary file for the audio download
+    const tempAudioFile = await Deno.makeTempFile({ suffix: '.mp4' });
     
-    if (!videoInfo || !videoInfo.html5player) {
-      throw new Error('Could not get video details');
+    // Use yt-dlp to download the best audio format
+    const downloadCommand = new Deno.Command("yt-dlp", {
+      args: [
+        `https://www.youtube.com/watch?v=${videoId}`,
+        "-f", "bestaudio[ext=m4a]/bestaudio",
+        "-o", tempAudioFile,
+        "--no-playlist"
+      ]
+    });
+    
+    const downloadResult = await downloadCommand.output();
+    if (!downloadResult.success) {
+      throw new Error(`yt-dlp download failed with status: ${downloadResult.code}`);
     }
     
-    // Get the audio-only stream with highest quality
-    let audioFormats = videoInfo.html5player.filter((format) => 
-      format.mimeType?.includes('audio/mp4') && !format.mimeType?.includes('video')
-    );
+    console.log(`Downloaded audio to temporary file: ${tempAudioFile}`);
     
-    if (!audioFormats.length) {
-      // Fallback to any audio format
-      audioFormats = videoInfo.html5player.filter((format) => 
-        format.mimeType?.includes('audio')
-      );
-    }
+    // Read the downloaded audio file
+    const audioData = await Deno.readFile(tempAudioFile);
     
-    if (!audioFormats.length) {
-      throw new Error('No audio formats found for this video');
-    }
-    
-    // Sort by bitrate (descending) and get the best quality
-    audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-    const bestAudioFormat = audioFormats[0];
-    
-    console.log(`Downloading audio with bitrate: ${bestAudioFormat.bitrate}`);
-    
-    // Download the audio
-    const audioUrl = bestAudioFormat.url;
-    const response = await fetch(audioUrl);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to download audio: ${response.status} ${response.statusText}`);
-    }
-    
-    const audioData = await response.arrayBuffer();
-    console.log(`Downloaded ${audioData.byteLength} bytes of audio data`);
-
     // Generate a unique filename
     const fileName = `${trackId}-${crypto.randomUUID()}.mp4`;
     const filePath = `tracks/${fileName}`;
-
+    
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('audio_files')
-      .upload(filePath, new Uint8Array(audioData), {
+      .upload(filePath, audioData, {
         contentType: 'audio/mp4',
         upsert: false
-      })
-
+      });
+    
     if (uploadError) {
       throw uploadError;
     }
-
+    
     console.log(`Successfully uploaded track to: ${filePath}`);
-
+    
+    // Cleanup temporary files
+    await Deno.remove(tempJsonFile);
+    await Deno.remove(tempAudioFile);
+    
+    // Get the duration of the audio file (we could extract this from the yt-dlp JSON output as well)
+    const duration = videoInfo.duration || 0;
+    
     // Store track information in the database
     const { error: dbError } = await supabase
       .from('stored_tracks')
@@ -122,15 +131,16 @@ serve(async (req) => {
         track_id: trackId,
         file_path: filePath,
         title: trackTitle,
-        artist: trackArtist
+        artist: trackArtist,
+        duration: Math.round(duration)
       })
-
+    
     if (dbError) {
       throw dbError;
     }
-
+    
     console.log('Successfully saved track information to database');
-
+    
     return new Response(
       JSON.stringify({ filePath }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

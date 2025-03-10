@@ -25,7 +25,10 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
   useEffect(() => {
     if (audio) {
       if (isPlaying) {
-        audio.play();
+        audio.play().catch(error => {
+          console.error("Error playing audio:", error);
+          toast.error("Playback failed. Try again.");
+        });
       } else {
         audio.pause();
       }
@@ -75,11 +78,23 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
         }
       }, 1000);
       
+      // Add ended event listener
+      newAudio.addEventListener('ended', () => {
+        if (progressIntervalRef.current) {
+          window.clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+        setProgress(0);
+      });
+      
       setAudio(newAudio);
       setProgress(0);
       
       if (isPlaying) {
-        newAudio.play();
+        newAudio.play().catch(error => {
+          console.error("Error playing audio:", error);
+          toast.error("Playback failed. Try again.");
+        });
       }
       
       toast.success(`Now playing: ${track.title}`);
@@ -110,6 +125,7 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
         window.clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
       }
+      setProgress(0);
     }
   };
 };
