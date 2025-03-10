@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipForward, SkipBack, Volume2, ListMusic } from "lucide-react";
@@ -15,6 +16,7 @@ interface MusicPlayerProps {
   onNext: () => void;
   onPrevious: () => void;
   queue?: Track[];
+  onPlayTrackFromQueue?: (track: Track) => void;
 }
 
 export const MusicPlayer = ({
@@ -24,10 +26,13 @@ export const MusicPlayer = ({
   onNext,
   onPrevious,
   queue = [],
+  onPlayTrackFromQueue,
 }: MusicPlayerProps) => {
   const [volume, setVolume] = useState([100]);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const progressIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (currentTrack) {
@@ -46,11 +51,16 @@ export const MusicPlayer = ({
       setIsLoading(true);
       
       // Check if track is already stored
-      let storedTrack = await getStoredTrack(track.id);
+      let storedTrack = null;
+      try {
+        storedTrack = await getStoredTrack(track.id);
+      } catch (error) {
+        console.log("Track not stored yet, will download");
+      }
       
       if (!storedTrack) {
         // Download the track if it's not stored
-        toast.info("Downloading track...");
+        toast.info(`Downloading "${track.title}"...`);
         const filePath = await downloadTrack(track);
         storedTrack = await getStoredTrack(track.id);
       }
@@ -58,21 +68,39 @@ export const MusicPlayer = ({
       // Get the public URL for the track
       const publicUrl = await getTrackUrl(storedTrack.file_path);
       
-      // Create and configure audio element
-      const newAudio = new Audio(publicUrl);
-      newAudio.volume = volume[0] / 100;
-      
       // Clean up old audio element
       if (audio) {
         audio.pause();
         audio.src = "";
+        if (progressIntervalRef.current) {
+          window.clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
       }
       
+      // Create and configure audio element
+      const newAudio = new Audio(publicUrl);
+      newAudio.volume = volume[0] / 100;
+      
+      // Setup progress tracking
+      progressIntervalRef.current = window.setInterval(() => {
+        if (newAudio.duration) {
+          setProgress((newAudio.currentTime / newAudio.duration) * 100);
+        }
+      }, 1000);
+      
+      newAudio.onended = () => {
+        onNext();
+      };
+      
       setAudio(newAudio);
+      setProgress(0);
       
       if (isPlaying) {
         newAudio.play();
       }
+      
+      toast.success(`Now playing: ${track.title}`);
     } catch (error) {
       console.error('Error loading track:', error);
       toast.error("Failed to load track");
@@ -90,6 +118,14 @@ export const MusicPlayer = ({
       }
     }
   }, [isPlaying, audio]);
+
+  const handleProgressChange = (value: number[]) => {
+    if (audio && audio.duration) {
+      const newTime = (value[0] / 100) * audio.duration;
+      audio.currentTime = newTime;
+      setProgress(value[0]);
+    }
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 glass-morphism p-4 animate-slide-up">
@@ -128,7 +164,7 @@ export const MusicPlayer = ({
               size="icon"
               onClick={onPlayPause}
               className="h-10 w-10 rounded-full bg-music-primary hover:bg-music-accent text-white"
-              disabled={isLoading}
+              disabled={isLoading || !currentTrack}
             >
               {isPlaying ? (
                 <Pause className="h-5 w-5" />
@@ -141,13 +177,14 @@ export const MusicPlayer = ({
               size="icon"
               onClick={onNext}
               className="text-gray-400 hover:text-white"
-              disabled={isLoading}
+              disabled={isLoading || queue.length === 0}
             >
               <SkipForward className="h-5 w-5" />
             </Button>
           </div>
           <Slider
-            defaultValue={[0]}
+            value={[progress]}
+            onValueChange={(values) => handleProgressChange(values)}
             max={100}
             step={1}
             className="w-full"
@@ -180,7 +217,17 @@ export const MusicPlayer = ({
                 <div className="space-y-4">
                   {queue.map((track, index) => (
                     <div key={track.id} className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg">
-                      <img src={track.albumArt} alt={track.title} className="h-12 w-12 rounded" />
+                      <div className="relative">
+                        <img src={track.albumArt} alt={track.title} className="h-12 w-12 rounded" />
+                        {onPlayTrackFromQueue && (
+                          <div 
+                            onClick={() => onPlayTrackFromQueue(track)} 
+                            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center cursor-pointer"
+                          >
+                            <Play className="w-6 h-6 text-white" />
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <h4 className="font-medium">{track.title}</h4>
                         <p className="text-sm text-gray-500">{track.artist}</p>

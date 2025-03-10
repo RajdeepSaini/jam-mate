@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ const Session = () => {
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [recommendations, setRecommendations] = useState<Track[]>([]);
   const [queue, setQueue] = useState<Track[]>([]);
+  const [currentPlayingTrack, setCurrentPlayingTrack] = useState<Track | undefined>(currentTrack);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -71,6 +73,16 @@ const Session = () => {
     toast.success(`Added "${track.title}" to queue`);
   };
 
+  const handlePlayTrack = (track: Track) => {
+    setCurrentPlayingTrack(track);
+    setIsPlaying(true);
+    
+    // If not already in queue, add it
+    if (!queue.some(t => t.id === track.id)) {
+      setQueue(prev => [...prev, track]);
+    }
+  };
+
   const handleSearch = async (query: string) => {
     try {
       const results = await searchTracks(query);
@@ -92,6 +104,32 @@ const Session = () => {
     }
   };
 
+  const handleNext = () => {
+    if (queue.length === 0) return;
+    
+    // Find the index of the current track
+    const currentIndex = currentPlayingTrack 
+      ? queue.findIndex(track => track.id === currentPlayingTrack.id)
+      : -1;
+    
+    // Play the next track
+    const nextIndex = currentIndex >= queue.length - 1 ? 0 : currentIndex + 1;
+    handlePlayTrack(queue[nextIndex]);
+  };
+
+  const handlePrevious = () => {
+    if (queue.length === 0) return;
+    
+    // Find the index of the current track
+    const currentIndex = currentPlayingTrack 
+      ? queue.findIndex(track => track.id === currentPlayingTrack.id)
+      : -1;
+    
+    // Play the previous track
+    const prevIndex = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
+    handlePlayTrack(queue[prevIndex]);
+  };
+
   if (!currentSession) {
     return <div>Session not found</div>;
   }
@@ -105,7 +143,11 @@ const Session = () => {
             <h2 className="text-xl font-semibold">Search Songs</h2>
           </div>
           <SearchBar onSearch={handleSearch} placeholder="Search for songs..." />
-          <SearchResults tracks={searchResults} onSelectTrack={handleSelectTrack} />
+          <SearchResults 
+            tracks={searchResults} 
+            onSelectTrack={handleSelectTrack} 
+            onPlayTrack={handlePlayTrack}
+          />
         </div>
 
         <div className="col-span-6 glass-morphism p-4 rounded-lg">
@@ -129,7 +171,15 @@ const Session = () => {
                     className="flex items-center justify-between p-4 rounded-lg hover:bg-accent"
                   >
                     <div className="flex items-center gap-4">
-                      <img src={track.albumArt} alt={track.title} className="w-12 h-12 rounded" />
+                      <div className="relative">
+                        <img src={track.albumArt} alt={track.title} className="w-12 h-12 rounded" />
+                        <div 
+                          className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center cursor-pointer"
+                          onClick={() => handlePlayTrack(track)}
+                        >
+                          <Play className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
                       <div>
                         <h3 className="font-medium">{track.title}</h3>
                         <p className="text-sm text-gray-500">{track.artist}</p>
@@ -161,12 +211,13 @@ const Session = () => {
       </div>
 
       <MusicPlayer
-        currentTrack={currentTrack}
+        currentTrack={currentPlayingTrack}
         isPlaying={isPlaying}
         onPlayPause={() => setIsPlaying(!isPlaying)}
-        onNext={() => console.log("Next track")}
-        onPrevious={() => console.log("Previous track")}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
         queue={queue}
+        onPlayTrackFromQueue={handlePlayTrack}
       />
     </div>
   );
