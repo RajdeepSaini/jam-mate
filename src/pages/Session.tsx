@@ -6,7 +6,7 @@ import { SearchBar } from "@/components/MusicSession/SearchBar";
 import { MusicPlayer } from "@/components/MusicSession/MusicPlayer";
 import { useMusicSession } from "@/contexts/MusicSessionContext";
 import { useSessionChat } from "@/hooks/useSessionChat";
-import { Music } from "lucide-react";
+import { Music, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchResults } from "@/components/MusicSession/SearchResults";
 import { Track } from "@/types/session";

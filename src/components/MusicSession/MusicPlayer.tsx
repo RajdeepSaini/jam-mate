@@ -1,13 +1,12 @@
 
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, SkipForward, SkipBack, Volume2, ListMusic } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Track } from "@/types/session";
-import { downloadTrack, getStoredTrack, getTrackUrl } from "@/services/tracks";
-import { toast } from "sonner";
+import { PlaybackControls } from "./PlaybackControls";
+import { VolumeControl } from "./VolumeControl";
+import { TrackInfo } from "./TrackInfo";
+import { QueueDrawer } from "./QueueDrawer";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 interface MusicPlayerProps {
   currentTrack?: Track;
@@ -29,162 +28,36 @@ export const MusicPlayer = ({
   onPlayTrackFromQueue,
 }: MusicPlayerProps) => {
   const [volume, setVolume] = useState([100]);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const progressIntervalRef = useRef<number | null>(null);
+  
+  const { 
+    isLoading, 
+    progress, 
+    handleProgressChange 
+  } = useAudioPlayer(currentTrack, isPlaying, volume);
 
-  useEffect(() => {
-    if (currentTrack) {
-      loadTrack(currentTrack);
-    }
-  }, [currentTrack]);
-
-  useEffect(() => {
-    if (audio) {
-      audio.volume = volume[0] / 100;
-    }
-  }, [volume, audio]);
-
-  const loadTrack = async (track: Track) => {
-    try {
-      setIsLoading(true);
-      
-      // Check if track is already stored
-      let storedTrack = null;
-      try {
-        storedTrack = await getStoredTrack(track.id);
-      } catch (error) {
-        console.log("Track not stored yet, will download");
-      }
-      
-      if (!storedTrack) {
-        // Download the track if it's not stored
-        toast.info(`Downloading "${track.title}"...`);
-        const filePath = await downloadTrack(track);
-        storedTrack = await getStoredTrack(track.id);
-      }
-
-      // Get the public URL for the track
-      const publicUrl = await getTrackUrl(storedTrack.file_path);
-      
-      // Clean up old audio element
-      if (audio) {
-        audio.pause();
-        audio.src = "";
-        if (progressIntervalRef.current) {
-          window.clearInterval(progressIntervalRef.current);
-          progressIntervalRef.current = null;
-        }
-      }
-      
-      // Create and configure audio element
-      const newAudio = new Audio(publicUrl);
-      newAudio.volume = volume[0] / 100;
-      
-      // Setup progress tracking
-      progressIntervalRef.current = window.setInterval(() => {
-        if (newAudio.duration) {
-          setProgress((newAudio.currentTime / newAudio.duration) * 100);
-        }
-      }, 1000);
-      
-      newAudio.onended = () => {
-        onNext();
-      };
-      
-      setAudio(newAudio);
-      setProgress(0);
-      
-      if (isPlaying) {
-        newAudio.play();
-      }
-      
-      toast.success(`Now playing: ${track.title}`);
-    } catch (error) {
-      console.error('Error loading track:', error);
-      toast.error("Failed to load track");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (audio) {
-      if (isPlaying) {
-        audio.play();
-      } else {
-        audio.pause();
-      }
-    }
-  }, [isPlaying, audio]);
-
-  const handleProgressChange = (value: number[]) => {
-    if (audio && audio.duration) {
-      const newTime = (value[0] / 100) * audio.duration;
-      audio.currentTime = newTime;
-      setProgress(value[0]);
-    }
+  const handleNext = () => {
+    onNext();
   };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 glass-morphism p-4 animate-slide-up">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-4 min-w-[240px]">
-          {currentTrack ? (
-            <>
-              <img
-                src={currentTrack.albumArt}
-                alt={currentTrack.title}
-                className="h-14 w-14 rounded-md shadow-lg"
-              />
-              <div>
-                <h3 className="font-semibold text-sm md:text-base line-clamp-1">{currentTrack.title}</h3>
-                <p className="text-xs md:text-sm text-gray-400 line-clamp-1">{currentTrack.artist}</p>
-              </div>
-            </>
-          ) : (
-            <div className="text-gray-400 text-sm">No track playing</div>
-          )}
+          <TrackInfo currentTrack={currentTrack} />
         </div>
 
         <div className="flex flex-col items-center gap-2 flex-1 max-w-[600px]">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onPrevious}
-              className="text-gray-400 hover:text-white"
-              disabled={isLoading}
-            >
-              <SkipBack className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onPlayPause}
-              className="h-10 w-10 rounded-full bg-music-primary hover:bg-music-accent text-white"
-              disabled={isLoading || !currentTrack}
-            >
-              {isPlaying ? (
-                <Pause className="h-5 w-5" />
-              ) : (
-                <Play className="h-5 w-5" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onNext}
-              className="text-gray-400 hover:text-white"
-              disabled={isLoading || queue.length === 0}
-            >
-              <SkipForward className="h-5 w-5" />
-            </Button>
-          </div>
+          <PlaybackControls
+            isPlaying={isPlaying}
+            onPlayPause={onPlayPause}
+            onNext={handleNext}
+            onPrevious={onPrevious}
+            isLoading={isLoading}
+            hasQueue={queue.length > 0}
+          />
           <Slider
             value={[progress]}
-            onValueChange={(values) => handleProgressChange(values)}
+            onValueChange={handleProgressChange}
             max={100}
             step={1}
             className="w-full"
@@ -192,52 +65,8 @@ export const MusicPlayer = ({
         </div>
 
         <div className="flex items-center gap-4 min-w-[200px] justify-end">
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-5 w-5 text-gray-400" />
-            <Slider
-              value={volume}
-              onValueChange={setVolume}
-              max={100}
-              step={1}
-              className="w-[100px]"
-            />
-          </div>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
-                <ListMusic className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>Queue</SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-100px)] mt-4">
-                <div className="space-y-4">
-                  {queue.map((track, index) => (
-                    <div key={track.id} className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg">
-                      <div className="relative">
-                        <img src={track.albumArt} alt={track.title} className="h-12 w-12 rounded" />
-                        {onPlayTrackFromQueue && (
-                          <div 
-                            onClick={() => onPlayTrackFromQueue(track)} 
-                            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded flex items-center justify-center cursor-pointer"
-                          >
-                            <Play className="w-6 h-6 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{track.title}</h4>
-                        <p className="text-sm text-gray-500">{track.artist}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
+          <VolumeControl volume={volume} onVolumeChange={setVolume} />
+          <QueueDrawer queue={queue} onPlayTrackFromQueue={onPlayTrackFromQueue} />
         </div>
       </div>
     </div>
