@@ -9,11 +9,26 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const progressIntervalRef = useRef<number | null>(null);
+  const retryCountRef = useRef(0);
+  const maxRetries = 2;
 
   useEffect(() => {
     if (currentTrack) {
       loadTrack(currentTrack);
     }
+    
+    // Cleanup function
+    return () => {
+      if (progressIntervalRef.current) {
+        window.clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+    };
   }, [currentTrack]);
 
   useEffect(() => {
@@ -38,6 +53,7 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
   const loadTrack = async (track: Track) => {
     try {
       setIsLoading(true);
+      retryCountRef.current = 0;
       
       // Check if track is already stored
       let storedTrack = null;
@@ -50,8 +66,15 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
       if (!storedTrack) {
         // Download the track if it's not stored
         toast.info(`Downloading "${track.title}"...`);
-        const filePath = await downloadTrack(track);
-        storedTrack = await getStoredTrack(track.id);
+        try {
+          const filePath = await downloadTrack(track);
+          storedTrack = await getStoredTrack(track.id);
+        } catch (error) {
+          console.error('Error downloading track:', error);
+          toast.error(`Failed to download "${track.title}". Please try again.`);
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Get the public URL for the track
@@ -78,13 +101,25 @@ export const useAudioPlayer = (currentTrack: Track | undefined, isPlaying: boole
         }
       }, 1000);
       
-      // Add ended event listener
+      // Add event listeners
       newAudio.addEventListener('ended', () => {
         if (progressIntervalRef.current) {
           window.clearInterval(progressIntervalRef.current);
           progressIntervalRef.current = null;
         }
         setProgress(0);
+      });
+      
+      // Error handling
+      newAudio.addEventListener('error', (e) => {
+        console.error("Audio error:", e);
+        if (retryCountRef.current < maxRetries) {
+          retryCountRef.current++;
+          toast.error(`Playback error. Retrying (${retryCountRef.current}/${maxRetries})...`);
+          setTimeout(() => loadTrack(track), 1000);
+        } else {
+          toast.error("Failed to play track after multiple attempts.");
+        }
       });
       
       setAudio(newAudio);
